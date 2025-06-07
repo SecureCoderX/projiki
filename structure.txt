@@ -1,0 +1,78 @@
+.
+├── babel.config.js
+├── build
+├── docs
+├── index.html
+├── jest.config.js
+├── package.json
+├── package-lock.json
+├── postcss.config.js
+├── README.md
+├── src
+│   ├── assets
+│   │   ├── icon.png
+│   │   └── logo.png
+│   ├── main
+│   │   ├── main.js
+│   │   └── preload.js
+│   ├── renderer
+│   │   ├── App.jsx
+│   │   ├── common
+│   │   │   └── DataStatus.jsx
+│   │   ├── components
+│   │   │   ├── ErrorBoundary.jsx
+│   │   │   ├── layout
+│   │   │   │   ├── Breadcrumb.jsx
+│   │   │   │   ├── Header.jsx
+│   │   │   │   ├── index.js
+│   │   │   │   ├── MainLayout.jsx
+│   │   │   │   └── Sidebar.jsx
+│   │   │   ├── Loading.jsx
+│   │   │   ├── LoadingOverlay.jsx
+│   │   │   ├── ProgressBar.jsx
+│   │   │   ├── SplashScreen.jsx
+│   │   │   ├── StoreProvider.jsx
+│   │   │   ├── TitleBar.jsx
+│   │   │   └── ui
+│   │   │       ├── Badge.jsx
+│   │   │       ├── Button.jsx
+│   │   │       ├── Card.jsx
+│   │   │       ├── index.js
+│   │   │       ├── Input.jsx
+│   │   │       ├── Modal.jsx
+│   │   │       └── ThemeToggle.jsx
+│   │   ├── contexts
+│   │   │   ├── LayoutContext.jsx
+│   │   │   └── ThemeContext.jsx
+│   │   ├── hooks
+│   │   │   ├── index.js
+│   │   │   └── useAutoSave.js
+│   │   ├── main.jsx
+│   │   ├── pages
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── Notes.jsx
+│   │   │   ├── Projects.jsx
+│   │   │   ├── Settings.jsx
+│   │   │   ├── Snippets.jsx
+│   │   │   └── Vault.jsx
+│   │   ├── services
+│   │   │   ├── BackupService.js
+│   │   │   ├── DataService.js
+│   │   │   └── index.js
+│   │   ├── stores
+│   │   │   ├── index.js
+│   │   │   ├── StoreDataIntegration.js
+│   │   │   ├── useAppStore.js
+│   │   │   ├── useProjectStore.js
+│   │   │   ├── useSearchStore.js
+│   │   │   └── useTaskStore.js
+│   │   ├── styles
+│   │   │   └── index.css
+│   │   └── utils
+│   │       └── validation.js
+│   └── shared
+├── structure.txt
+├── tailwind.config.js
+├── tests
+│   └── setup.js
+└── vite.config.js

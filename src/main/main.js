@@ -231,6 +231,45 @@ ipcMain.handle('app-get-info', () => {
   };
 });
 
+// App metadata handlers (for DataService)
+ipcMain.handle('app:getVersion', () => {
+  return app.getVersion()
+})
+
+ipcMain.handle('app:getName', () => {
+  return app.getName()
+})
+
+ipcMain.handle('app:getPath', (event, name) => {
+  return app.getPath(name)
+})
+
+// File dialog handlers (for backup/export functionality)
+ipcMain.handle('dialog:openFile', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [
+      { name: 'JSON Files', extensions: ['json'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+  })
+  
+  return result
+})
+
+ipcMain.handle('dialog:saveFile', async (event, options = {}) => {
+  const result = await dialog.showSaveDialog(mainWindow, {
+    filters: [
+      { name: 'JSON Files', extensions: ['json'] },
+      { name: 'Markdown Files', extensions: ['md'] },
+      { name: 'All Files', extensions: ['*'] }
+    ],
+    ...options
+  })
+  
+  return result
+})
+
 // Crash recovery
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);

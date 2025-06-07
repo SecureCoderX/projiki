@@ -2,10 +2,14 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LayoutProvider } from './contexts/LayoutContext';
+import StoreProvider from './components/StoreProvider';
 import TitleBar from './components/TitleBar';
 import ErrorBoundary from './components/ErrorBoundary';
 import SplashScreen from './components/SplashScreen';
 import MainLayout from './components/layout/MainLayout';
+import DataStatus from './components/common/DataStatus';
+import { useAutoSave } from './hooks/useAutoSave';
+import { useAppStore } from './stores';
 
 // Import pages
 import Dashboard from './pages/Dashboard';
@@ -17,13 +21,30 @@ import Settings from './pages/Settings';
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Get loading state from store (with fallback for placeholder stores)
+  const storeLoading = useAppStore(state => state?.isLoading) || false;
+  const currentProject = useAppStore(state => state?.currentProject) || null;
+  
+  // Enable auto-save for the entire application
+  const autoSave = useAutoSave({
+    enabled: !!currentProject,
+    debounceDelay: 1000,      // 1 second debounce
+    autoSaveInterval: 30000,  // Auto-save every 30 seconds
+    onSaveSuccess: (data) => {
+      console.log('✅ Auto-save successful:', data?.project?.name || 'Unknown project')
+    },
+    onSaveError: (error) => {
+      console.error('❌ Auto-save failed:', error?.message || 'Unknown error')
+    }
+  });
 
   const handleSplashComplete = () => {
     setIsLoading(false);
   };
 
-  // Show splash screen while loading
-  if (isLoading) {
+  // Show splash screen while loading OR while stores are initializing
+  if (isLoading || storeLoading) {
     return <SplashScreen onComplete={handleSplashComplete} />;
   }
 
@@ -31,7 +52,27 @@ function AppContent() {
   return (
     <div className="h-screen bg-bg-primary text-text-primary flex flex-col overflow-hidden">
       <TitleBar />
+      
+      {/* Data Status Bar - shows save status */}
+<div className="bg-bg-secondary border-b border-border-primary px-4 py-1">
+  <DataStatus className="justify-end" />
+</div>
+      
       <MainLayout>
+        {/* Auto-save status indicator */}
+        {autoSave.isSaving && (
+          <div className="fixed top-16 right-4 z-50 bg-blue-500 text-white px-3 py-1 rounded-md text-sm shadow-lg animate-pulse">
+            💾 Saving...
+          </div>
+        )}
+        
+        {/* Save error notification */}
+        {autoSave.saveError && (
+          <div className="fixed top-16 right-4 z-50 bg-red-500 text-white px-3 py-1 rounded-md text-sm shadow-lg">
+            ❌ Save failed: {autoSave.saveError}
+          </div>
+        )}
+        
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/projects" element={<Projects />} />
@@ -50,9 +91,11 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <LayoutProvider>
-          <Router>
-            <AppContent />
-          </Router>
+          <StoreProvider>
+            <Router>
+              <AppContent />
+            </Router>
+          </StoreProvider>
         </LayoutProvider>
       </ThemeProvider>
     </ErrorBoundary>
