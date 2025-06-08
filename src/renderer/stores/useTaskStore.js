@@ -4,6 +4,7 @@ import { devtools } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 import { v4 as uuidv4 } from 'uuid'
 import useAppStore from './useAppStore'
+import DataService from '../services/DataService'
 
 const useTaskStore = create()(
   devtools(
@@ -43,42 +44,48 @@ const useTaskStore = create()(
           state.tasksError = null
         }),
         
-      createTask: (taskData) =>
-        set((state) => {
-          const currentProject = useAppStore.getState().currentProject
-          
-          if (!currentProject) {
-            useAppStore.getState().addNotification({
-              type: 'error',
-              title: 'No Project Selected',
-              message: 'Please select a project before creating tasks.'
-            })
-            return
+      createTask: async (taskData) => {
+        const currentProject = useAppStore.getState().currentProject
+        
+        if (!currentProject) {
+          useAppStore.getState().addNotification({
+            type: 'error',
+            title: 'No Project Selected',
+            message: 'Please select a project before creating tasks.'
+          })
+          return
+        }
+        
+        const newTask = {
+          id: uuidv4(),
+          projectId: currentProject.id,
+          title: taskData.title || 'Untitled Task',
+          content: taskData.content || '',
+          type: taskData.type || 'task', // 'task' | 'note' | 'snippet' | 'idea'
+          status: taskData.status || 'todo',
+          mode: taskData.mode || currentProject.mode,
+          position: taskData.position || { x: 0, y: 0 },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          metadata: {
+            tags: taskData.tags || [],
+            priority: taskData.priority || 'medium',
+            estimatedTime: taskData.estimatedTime || null,
+            actualTime: taskData.actualTime || null,
+            dependencies: taskData.dependencies || [],
+            assignee: taskData.assignee || null,
+            ...taskData.metadata
           }
+        }
+        
+        try {
+          // Save task to DataService
+          await DataService.saveTask(currentProject.id, newTask)
           
-          const newTask = {
-            id: uuidv4(),
-            projectId: currentProject.id,
-            title: taskData.title || 'Untitled Task',
-            content: taskData.content || '',
-            type: taskData.type || 'task', // 'task' | 'note' | 'snippet' | 'idea'
-            status: taskData.status || 'todo',
-            mode: taskData.mode || currentProject.mode,
-            position: taskData.position || { x: 0, y: 0 },
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            metadata: {
-              tags: taskData.tags || [],
-              priority: taskData.priority || 'medium',
-              estimatedTime: taskData.estimatedTime || null,
-              actualTime: taskData.actualTime || null,
-              dependencies: taskData.dependencies || [],
-              assignee: taskData.assignee || null,
-              ...taskData.metadata
-            }
-          }
-          
-          state.tasks.push(newTask)
+          // Update store
+          set((state) => {
+            state.tasks.push(newTask)
+          })
           
           useAppStore.getState().addNotification({
             type: 'success',
@@ -87,31 +94,73 @@ const useTaskStore = create()(
           })
           
           useAppStore.getState().updateLastSaved()
-        }),
+          console.log('✅ Task created and saved:', newTask.title)
+          return newTask
+          
+        } catch (error) {
+          console.error('❌ Failed to create task:', error)
+          useAppStore.getState().addNotification({
+            type: 'error',
+            title: 'Task Creation Failed',
+            message: `Failed to create task: ${error.message}`
+          })
+          throw error
+        }
+      },
         
-      updateTask: (taskId, updates) =>
-        set((state) => {
-          const taskIndex = state.tasks.findIndex(t => t.id === taskId)
+      updateTask: async (taskId, updates) => {
+        const currentProject = useAppStore.getState().currentProject
+        if (!currentProject) return
+        
+        try {
+          const taskIndex = get().tasks.findIndex(t => t.id === taskId)
           
           if (taskIndex !== -1) {
             const updatedTask = {
-              ...state.tasks[taskIndex],
+              ...get().tasks[taskIndex],
               ...updates,
               updatedAt: new Date().toISOString()
             }
             
-            state.tasks[taskIndex] = updatedTask
+            // Save to DataService
+            await DataService.saveTask(currentProject.id, updatedTask)
+            
+            // Update store
+            set((state) => {
+              state.tasks[taskIndex] = updatedTask
+            })
+            
             useAppStore.getState().updateLastSaved()
+            console.log('✅ Task updated and saved:', updatedTask.title)
           }
-        }),
+        } catch (error) {
+          console.error('❌ Failed to update task:', error)
+          useAppStore.getState().addNotification({
+            type: 'error',
+            title: 'Update Failed',
+            message: `Failed to update task: ${error.message}`
+          })
+          throw error
+        }
+      },
         
-      deleteTask: (taskId) =>
-        set((state) => {
-          const taskToDelete = state.tasks.find(t => t.id === taskId)
+      deleteTask: async (taskId) => {
+        const currentProject = useAppStore.getState().currentProject
+        if (!currentProject) return
+        
+        try {
+          const taskToDelete = get().tasks.find(t => t.id === taskId)
           
           if (taskToDelete) {
-            state.tasks = state.tasks.filter(t => t.id !== taskId)
-            state.selectedTasks = state.selectedTasks.filter(id => id !== taskId)
+            // Remove from current tasks and save to DataService
+            const updatedTasks = get().tasks.filter(t => t.id !== taskId)
+            await DataService.saveTasks(currentProject.id, updatedTasks)
+            
+            // Update store
+            set((state) => {
+              state.tasks = state.tasks.filter(t => t.id !== taskId)
+              state.selectedTasks = state.selectedTasks.filter(id => id !== taskId)
+            })
             
             useAppStore.getState().addNotification({
               type: 'info',
@@ -120,28 +169,38 @@ const useTaskStore = create()(
             })
             
             useAppStore.getState().updateLastSaved()
+            console.log('✅ Task deleted:', taskToDelete.title)
           }
-        }),
+        } catch (error) {
+          console.error('❌ Failed to delete task:', error)
+          useAppStore.getState().addNotification({
+            type: 'error',
+            title: 'Delete Failed',
+            message: `Failed to delete task: ${error.message}`
+          })
+          throw error
+        }
+      },
         
-      moveTask: (taskId, newPosition) =>
-        set((state) => {
-          get().updateTask(taskId, { position: newPosition })
-        }),
+      moveTask: async (taskId, newPosition) => {
+        await get().updateTask(taskId, { position: newPosition })
+      },
         
-      updateTaskStatus: (taskId, newStatus) =>
-        set((state) => {
-          get().updateTask(taskId, { status: newStatus })
-        }),
+      updateTaskStatus: async (taskId, newStatus) => {
+        await get().updateTask(taskId, { status: newStatus })
+      },
         
-      updateTaskPriority: (taskId, newPriority) =>
-        set((state) => {
-          get().updateTask(taskId, { 
+      updateTaskPriority: async (taskId, newPriority) => {
+        const task = get().tasks.find(t => t.id === taskId)
+        if (task) {
+          await get().updateTask(taskId, { 
             metadata: { 
-              ...state.tasks.find(t => t.id === taskId)?.metadata,
+              ...task.metadata,
               priority: newPriority 
             } 
           })
-        }),
+        }
+      },
         
       // Selection management
       selectTask: (taskId) =>
@@ -181,19 +240,17 @@ const useTaskStore = create()(
         }),
         
       // Bulk operations
-      bulkUpdateTasks: (taskIds, updates) =>
-        set((state) => {
-          taskIds.forEach(taskId => {
-            get().updateTask(taskId, updates)
-          })
-        }),
+      bulkUpdateTasks: async (taskIds, updates) => {
+        for (const taskId of taskIds) {
+          await get().updateTask(taskId, updates)
+        }
+      },
         
-      bulkDeleteTasks: (taskIds) =>
-        set((state) => {
-          taskIds.forEach(taskId => {
-            get().deleteTask(taskId)
-          })
-        }),
+      bulkDeleteTasks: async (taskIds) => {
+        for (const taskId of taskIds) {
+          await get().deleteTask(taskId)
+        }
+      },
         
       // View management
       setCurrentView: (view) =>
@@ -335,27 +392,96 @@ const useTaskStore = create()(
         return [...new Set(allTags)].sort()
       },
       
-      // Async operations with DataService integration
+      // Load tasks for a specific project
       loadTasks: async (projectId) => {
-        const { taskStoreIntegration } = await import('../services/StoreDataIntegration')
-        return await taskStoreIntegration.loadTasks(projectId, set, get)
+        set((state) => {
+          state.loadingTasks = true
+          state.tasksError = null
+        })
+        
+        try {
+          console.log('📝 Loading tasks for project:', projectId)
+          const tasks = await DataService.loadTasks(projectId)
+          
+          set((state) => {
+            // Replace tasks for this project
+            state.tasks = state.tasks.filter(t => t.projectId !== projectId).concat(tasks)
+            state.loadingTasks = false
+            state.tasksError = null
+          })
+          
+          console.log(`✅ Loaded ${tasks.length} tasks`)
+          return tasks
+          
+        } catch (error) {
+          console.error('❌ Failed to load tasks:', error)
+          set((state) => {
+            state.loadingTasks = false
+            state.tasksError = error.message
+          })
+          
+          useAppStore.getState().addNotification({
+            type: 'error',
+            title: 'Load Failed',
+            message: `Failed to load tasks: ${error.message}`
+          })
+          
+          throw error
+        }
       },
       
+      // Save all tasks for a project
       saveTasks: async (projectId, tasks) => {
-        const { taskStoreIntegration } = await import('../services/StoreDataIntegration')
-        return await taskStoreIntegration.saveTasks(projectId, tasks, set, get)
+        try {
+          await DataService.saveTasks(projectId, tasks)
+          useAppStore.getState().updateLastSaved()
+          console.log(`✅ Saved ${tasks.length} tasks for project:`, projectId)
+        } catch (error) {
+          console.error('❌ Failed to save tasks:', error)
+          useAppStore.getState().addNotification({
+            type: 'error',
+            title: 'Save Failed',
+            message: `Failed to save tasks: ${error.message}`
+          })
+          throw error
+        }
       },
 
+      // Save individual task
       saveTask: async (task) => {
-        const { taskStoreIntegration } = await import('../services/StoreDataIntegration')
-        return await taskStoreIntegration.saveTask(task, set, get)
+        try {
+          await DataService.saveTask(task.projectId, task)
+          useAppStore.getState().updateLastSaved()
+          console.log('✅ Task saved:', task.title)
+        } catch (error) {
+          console.error('❌ Failed to save task:', error)
+          useAppStore.getState().addNotification({
+            type: 'error',
+            title: 'Save Failed',
+            message: `Failed to save task: ${error.message}`
+          })
+          throw error
+        }
       },
 
+      // Save all tasks for current project
       saveCurrentProjectTasks: async () => {
         const currentProject = useAppStore.getState().currentProject
         if (currentProject) {
           const tasks = get().getCurrentProjectTasks()
           return await get().saveTasks(currentProject.id, tasks)
+        }
+      },
+      
+      // Initialize task store
+      initialize: async () => {
+        try {
+          console.log('📝 Initializing task store...')
+          // Task store doesn't need global initialization like project store
+          // Tasks are loaded per-project when needed
+          console.log('✅ Task store initialized')
+        } catch (error) {
+          console.error('❌ Failed to initialize task store:', error)
         }
       },
     })),

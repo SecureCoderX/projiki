@@ -7,13 +7,13 @@ import TitleBar from './components/TitleBar';
 import ErrorBoundary from './components/ErrorBoundary';
 import SplashScreen from './components/SplashScreen';
 import MainLayout from './components/layout/MainLayout';
-import DataStatus from './components/common/DataStatus';
 import { useAutoSave } from './hooks/useAutoSave';
 import { useAppStore } from './stores';
 
 // Import pages
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
+import Tasks from './pages/Tasks';
 import Vault from './pages/Vault';
 import Snippets from './pages/Snippets';
 import Notes from './pages/Notes';
@@ -53,11 +53,6 @@ function AppContent() {
     <div className="h-screen bg-bg-primary text-text-primary flex flex-col overflow-hidden">
       <TitleBar />
       
-      {/* Data Status Bar - shows save status */}
-<div className="bg-bg-secondary border-b border-border-primary px-4 py-1">
-  <DataStatus className="justify-end" />
-</div>
-      
       <MainLayout>
         {/* Auto-save status indicator */}
         {autoSave.isSaving && (
@@ -76,6 +71,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/projects" element={<Projects />} />
+          <Route path="/tasks" element={<Tasks />} />
           <Route path="/vault" element={<Vault />} />
           <Route path="/snippets" element={<Snippets />} />
           <Route path="/notes" element={<Notes />} />

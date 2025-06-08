@@ -4,6 +4,7 @@ import { devtools } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 import { v4 as uuidv4 } from 'uuid'
 import useAppStore from './useAppStore'
+import DataService from '../services/DataService'
 
 const useProjectStore = create()(
   devtools(
@@ -57,33 +58,39 @@ const useProjectStore = create()(
           state.projectsError = null
         }),
         
-      createProject: (projectData) =>
-        set((state) => {
-          const newProject = {
-            id: uuidv4(),
-            name: projectData.name || 'Untitled Project',
-            description: projectData.description || '',
-            mode: projectData.mode || 'structured',
-            status: 'active',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            settings: {
-              defaultView: projectData.defaultView || 'kanban',
-              autoSave: true,
-              syncFrequency: 30000, // 30 seconds
-              ...projectData.settings
-            },
-            metadata: {
-              tags: projectData.tags || [],
-              priority: projectData.priority || 'medium',
-              deadline: projectData.deadline || null,
-              estimatedHours: projectData.estimatedHours || null,
-              ...projectData.metadata
-            }
+      createProject: async (projectData) => {
+        const newProject = {
+          id: uuidv4(),
+          name: projectData.name || 'Untitled Project',
+          description: projectData.description || '',
+          mode: projectData.mode || 'structured',
+          status: 'active',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          settings: {
+            defaultView: projectData.defaultView || 'kanban',
+            autoSave: true,
+            syncFrequency: 30000, // 30 seconds
+            ...projectData.settings
+          },
+          metadata: {
+            tags: projectData.tags || [],
+            priority: projectData.priority || 'medium',
+            deadline: projectData.deadline || null,
+            estimatedHours: projectData.estimatedHours || null,
+            ...projectData.metadata
           }
+        }
+        
+        try {
+          // Save to DataService first
+          await DataService.saveProject(newProject)
           
-          state.projects.push(newProject)
-          state.currentProject = newProject
+          // Then update store
+          set((state) => {
+            state.projects.push(newProject)
+            state.currentProject = newProject
+          })
           
           // Update app store
           useAppStore.getState().setCurrentProject(newProject)
@@ -92,51 +99,98 @@ const useProjectStore = create()(
             title: 'Project Created',
             message: `Project "${newProject.name}" has been created successfully.`
           })
-        }),
+          
+          console.log('✅ Project created and saved:', newProject.name)
+          return newProject
+          
+        } catch (error) {
+          console.error('❌ Failed to create project:', error)
+          useAppStore.getState().addNotification({
+            type: 'error',
+            title: 'Project Creation Failed',
+            message: `Failed to create project: ${error.message}`
+          })
+          throw error
+        }
+      },
         
-      updateProject: (projectId, updates) =>
-        set((state) => {
-          const projectIndex = state.projects.findIndex(p => p.id === projectId)
+      updateProject: async (projectId, updates) => {
+        try {
+          const projectIndex = get().projects.findIndex(p => p.id === projectId)
           
           if (projectIndex !== -1) {
             const updatedProject = {
-              ...state.projects[projectIndex],
+              ...get().projects[projectIndex],
               ...updates,
               updatedAt: new Date().toISOString()
             }
             
-            state.projects[projectIndex] = updatedProject
+            // Save to DataService first
+            await DataService.saveProject(updatedProject)
             
-            // Update current project if it's the one being updated
-            if (state.currentProject?.id === projectId) {
-              state.currentProject = updatedProject
-              useAppStore.getState().setCurrentProject(updatedProject)
-            }
+            // Then update store
+            set((state) => {
+              state.projects[projectIndex] = updatedProject
+              
+              // Update current project if it's the one being updated
+              if (state.currentProject?.id === projectId) {
+                state.currentProject = updatedProject
+                useAppStore.getState().setCurrentProject(updatedProject)
+              }
+            })
             
             useAppStore.getState().updateLastSaved()
+            console.log('✅ Project updated and saved:', updatedProject.name)
+            
           }
-        }),
+        } catch (error) {
+          console.error('❌ Failed to update project:', error)
+          useAppStore.getState().addNotification({
+            type: 'error',
+            title: 'Update Failed',
+            message: `Failed to update project: ${error.message}`
+          })
+          throw error
+        }
+      },
         
-      deleteProject: (projectId) =>
-        set((state) => {
-          const projectToDelete = state.projects.find(p => p.id === projectId)
+      deleteProject: async (projectId) => {
+        try {
+          const projectToDelete = get().projects.find(p => p.id === projectId)
           
           if (projectToDelete) {
-            state.projects = state.projects.filter(p => p.id !== projectId)
+            // Delete from DataService first
+            await DataService.deleteProject(projectId)
             
-            // Clear current project if it's the one being deleted
-            if (state.currentProject?.id === projectId) {
-              state.currentProject = null
-              useAppStore.getState().setCurrentProject(null)
-            }
+            // Then update store
+            set((state) => {
+              state.projects = state.projects.filter(p => p.id !== projectId)
+              
+              // Clear current project if it's the one being deleted
+              if (state.currentProject?.id === projectId) {
+                state.currentProject = null
+                useAppStore.getState().setCurrentProject(null)
+              }
+            })
             
             useAppStore.getState().addNotification({
               type: 'info',
               title: 'Project Deleted',
               message: `Project "${projectToDelete.name}" has been deleted.`
             })
+            
+            console.log('✅ Project deleted:', projectToDelete.name)
           }
-        }),
+        } catch (error) {
+          console.error('❌ Failed to delete project:', error)
+          useAppStore.getState().addNotification({
+            type: 'error',
+            title: 'Delete Failed',
+            message: `Failed to delete project: ${error.message}`
+          })
+          throw error
+        }
+      },
         
       setCurrentProject: (project) =>
         set((state) => {
@@ -144,9 +198,9 @@ const useProjectStore = create()(
           useAppStore.getState().setCurrentProject(project)
         }),
         
-      duplicateProject: (projectId) =>
-        set((state) => {
-          const originalProject = state.projects.find(p => p.id === projectId)
+      duplicateProject: async (projectId) => {
+        try {
+          const originalProject = get().projects.find(p => p.id === projectId)
           
           if (originalProject) {
             const duplicatedProject = {
@@ -157,25 +211,41 @@ const useProjectStore = create()(
               updatedAt: new Date().toISOString(),
             }
             
-            state.projects.push(duplicatedProject)
+            // Save to DataService first
+            await DataService.saveProject(duplicatedProject)
+            
+            // Then update store
+            set((state) => {
+              state.projects.push(duplicatedProject)
+            })
             
             useAppStore.getState().addNotification({
               type: 'success',
               title: 'Project Duplicated',
               message: `Project "${duplicatedProject.name}" has been created.`
             })
+            
+            console.log('✅ Project duplicated:', duplicatedProject.name)
+            return duplicatedProject
           }
-        }),
+        } catch (error) {
+          console.error('❌ Failed to duplicate project:', error)
+          useAppStore.getState().addNotification({
+            type: 'error',
+            title: 'Duplicate Failed',
+            message: `Failed to duplicate project: ${error.message}`
+          })
+          throw error
+        }
+      },
         
-      archiveProject: (projectId) =>
-        set((state) => {
-          get().updateProject(projectId, { status: 'archived' })
-        }),
+      archiveProject: async (projectId) => {
+        await get().updateProject(projectId, { status: 'archived' })
+      },
         
-      unarchiveProject: (projectId) =>
-        set((state) => {
-          get().updateProject(projectId, { status: 'active' })
-        }),
+      unarchiveProject: async (projectId) => {
+        await get().updateProject(projectId, { status: 'active' })
+      },
         
       // Getters and computed values
       getActiveProjects: () => get().projects.filter(p => p.status === 'active'),
@@ -212,23 +282,22 @@ const useProjectStore = create()(
       },
       
       // Template operations
-      createProjectFromTemplate: (templateId, customData = {}) =>
-        set((state) => {
-          const template = state.templates.find(t => t.id === templateId)
-          
-          if (template) {
-            const projectData = {
-              name: customData.name || template.name,
-              description: customData.description || template.description,
-              mode: template.defaultMode,
-              ...customData
-            }
-            
-            get().createProject(projectData)
-          }
-        }),
+      createProjectFromTemplate: async (templateId, customData = {}) => {
+        const template = get().templates.find(t => t.id === templateId)
         
-      // Async operations placeholders (will be implemented with DataService)
+        if (template) {
+          const projectData = {
+            name: customData.name || template.name,
+            description: customData.description || template.description,
+            mode: template.defaultMode,
+            ...customData
+          }
+          
+          return await get().createProject(projectData)
+        }
+      },
+        
+      // Load projects from DataService
       loadProjects: async () => {
         set((state) => {
           state.loadingProjects = true
@@ -236,33 +305,58 @@ const useProjectStore = create()(
         })
         
         try {
-          // TODO: Implement with DataService in next step
-          // const projects = await DataService.loadAllProjects()
-          // get().setProjects(projects)
+          console.log('📂 Loading projects from storage...')
+          const projects = await DataService.loadAllProjects()
           
-          // For now, just clear loading state
           set((state) => {
+            state.projects = projects
             state.loadingProjects = false
+            state.projectsError = null
           })
+          
+          console.log(`✅ Loaded ${projects.length} projects`)
+          return projects
+          
         } catch (error) {
+          console.error('❌ Failed to load projects:', error)
           set((state) => {
             state.loadingProjects = false
             state.projectsError = error.message
           })
+          
+          useAppStore.getState().addNotification({
+            type: 'error',
+            title: 'Load Failed',
+            message: `Failed to load projects: ${error.message}`
+          })
+          
+          throw error
         }
       },
       
+      // Save individual project
       saveProject: async (project) => {
         try {
-          // TODO: Implement with DataService in next step
-          // await DataService.saveProject(project)
+          await DataService.saveProject(project)
           useAppStore.getState().updateLastSaved()
+          console.log('✅ Project saved:', project.name)
         } catch (error) {
+          console.error('❌ Failed to save project:', error)
           useAppStore.getState().addNotification({
             type: 'error',
             title: 'Save Failed',
             message: `Failed to save project: ${error.message}`
           })
+          throw error
+        }
+      },
+      
+      // Initialize store - load projects on app start
+      initialize: async () => {
+        try {
+          await get().loadProjects()
+        } catch (error) {
+          console.error('❌ Failed to initialize project store:', error)
         }
       },
     })),

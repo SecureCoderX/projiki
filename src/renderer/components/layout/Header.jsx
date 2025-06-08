@@ -9,7 +9,7 @@ const Header = ({ title, actions = null, breadcrumbItems = null }) => {
   const { isDark } = useTheme();
 
   return (
-    <header className="bg-bg-secondary border-b border-border px-6 py-4 flex items-center justify-between">
+    <header className="bg-bg-secondary border-b border-border px-6 py-4 flex items-center justify-between relative z-50">
       {/* Left side - Menu toggle, breadcrumbs, title */}
       <div className="flex items-center space-x-4">
         <Button

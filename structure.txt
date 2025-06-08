@@ -17,9 +17,10 @@
 │   │   └── preload.js
 │   ├── renderer
 │   │   ├── App.jsx
-│   │   ├── common
-│   │   │   └── DataStatus.jsx
 │   │   ├── components
+│   │   │   ├── common
+│   │   │   │   ├── DataStatus.jsx
+│   │   │   │   └── SearchBar.jsx
 │   │   │   ├── ErrorBoundary.jsx
 │   │   │   ├── layout
 │   │   │   │   ├── Breadcrumb.jsx
@@ -30,8 +31,24 @@
 │   │   │   ├── Loading.jsx
 │   │   │   ├── LoadingOverlay.jsx
 │   │   │   ├── ProgressBar.jsx
+│   │   │   ├── projects
+│   │   │   │   ├── ProjectCard.jsx
+│   │   │   │   ├── ProjectFilters.jsx
+│   │   │   │   ├── ProjectForm.jsx
+│   │   │   │   └── ProjectGrid.jsx
 │   │   │   ├── SplashScreen.jsx
 │   │   │   ├── StoreProvider.jsx
+│   │   │   ├── tasks
+│   │   │   │   ├── CreativeView.jsx
+│   │   │   │   ├── index.js
+│   │   │   │   ├── KanbanBoard.jsx
+│   │   │   │   ├── KanbanColumn.jsx
+│   │   │   │   ├── TaskCard.jsx
+│   │   │   │   ├── TaskFilters.jsx
+│   │   │   │   ├── TaskForm.jsx
+│   │   │   │   ├── TaskList.jsx
+│   │   │   │   ├── TimelineView.jsx
+│   │   │   │   └── ViewToggle.jsx
 │   │   │   ├── TitleBar.jsx
 │   │   │   └── ui
 │   │   │       ├── Badge.jsx
@@ -54,11 +71,13 @@
 │   │   │   ├── Projects.jsx
 │   │   │   ├── Settings.jsx
 │   │   │   ├── Snippets.jsx
+│   │   │   ├── Tasks.jsx
 │   │   │   └── Vault.jsx
 │   │   ├── services
 │   │   │   ├── BackupService.js
 │   │   │   ├── DataService.js
-│   │   │   └── index.js
+│   │   │   ├── index.js
+│   │   │   └── SearchService.js
 │   │   ├── stores
 │   │   │   ├── index.js
 │   │   │   ├── StoreDataIntegration.js

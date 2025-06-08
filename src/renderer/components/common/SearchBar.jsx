@@ -80,7 +80,7 @@ const SearchBar = ({ className = '', onResultSelect = null }) => {
   const hasResults = totalResults > 0
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${className}`} style={{ zIndex: 60 }}>
       {/* Search Input */}
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative">
@@ -94,11 +94,11 @@ const SearchBar = ({ className = '', onResultSelect = null }) => {
             className="w-full px-4 py-2 pl-10 pr-12 bg-bg-secondary border border-border-primary rounded-lg 
                      text-text-primary placeholder-text-secondary
                      focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent
-                     transition-all duration-200"
+                     transition-all duration-200 relative z-60"
           />
           
           {/* Search Icon */}
-          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary">
+          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary z-60">
             {isSearching ? (
               <div className="animate-spin w-4 h-4 border-2 border-accent-primary border-t-transparent rounded-full" />
             ) : (
@@ -115,7 +115,7 @@ const SearchBar = ({ className = '', onResultSelect = null }) => {
                 resetSearch()
                 setIsOpen(false)
               }}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-secondary hover:text-text-primary"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-secondary hover:text-text-primary z-60"
             >
               ✕
             </button>
@@ -127,7 +127,15 @@ const SearchBar = ({ className = '', onResultSelect = null }) => {
       {isOpen && query && (
         <div
           ref={resultsRef}
-          className="absolute top-full left-0 right-0 mt-1 bg-bg-secondary border border-border-primary rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto"
+          className="fixed inset-x-4 mt-1 bg-bg-secondary border border-border-primary rounded-lg shadow-xl max-h-96 overflow-y-auto"
+          style={{ 
+            zIndex: 9999,
+            top: inputRef.current ? inputRef.current.getBoundingClientRect().bottom + 4 : 'auto',
+            left: inputRef.current ? inputRef.current.getBoundingClientRect().left : 'auto',
+            right: inputRef.current ? window.innerWidth - inputRef.current.getBoundingClientRect().right : 'auto',
+            maxWidth: inputRef.current ? inputRef.current.getBoundingClientRect().width : 'auto',
+            minWidth: '320px'
+          }}
         >
           {/* Loading State */}
           {isSearching && (

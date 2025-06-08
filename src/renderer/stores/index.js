@@ -63,6 +63,10 @@ export const useAppStore = create()(
 // Real Search Store
 export { default as useSearchStore } from './useSearchStore'
 
+// NEW: Phase 3.3 Vibe Coder Stores
+export { default as usePromptStore } from './usePromptStore'
+export { default as useSnippetStore } from './useSnippetStore'
+
 // Keep the other stores as placeholders for now
 export const useProjectStore = (selector) => {
   const mockStore = {

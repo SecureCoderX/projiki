@@ -410,6 +410,442 @@ class DataService {
     }
   }
 
+  // Extension for DataService.js - Add these methods to the existing DataService class
+
+// =============================================================================
+// PROMPT OPERATIONS
+// =============================================================================
+
+/**
+ * Save a prompt to the file system or localStorage
+ */
+async savePrompt(prompt) {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    const promptData = {
+      ...prompt,
+      savedAt: new Date().toISOString(),
+      version: '1.0.0'
+    }
+
+    if (this.browserMode) {
+      // Browser mode: save to localStorage
+      const prompts = this._getBrowserStorage('projiki-prompts') || []
+      const existingIndex = prompts.findIndex(p => p.id === prompt.id)
+      
+      if (existingIndex >= 0) {
+        prompts[existingIndex] = promptData
+      } else {
+        prompts.push(promptData)
+      }
+      
+      this._setBrowserStorage('projiki-prompts', prompts)
+    } else {
+      // Electron mode: save to file system
+      const promptsDir = path.join(this.basePath, 'prompts')
+      await fs.ensureDir(promptsDir)
+      
+      const promptFile = path.join(promptsDir, `${sanitize(prompt.id)}.json`)
+      await fs.writeJson(promptFile, promptData, { spaces: 2 })
+    }
+
+    // Update statistics
+    await this.updateStatistics({ 
+      lastSave: new Date().toISOString(),
+      totalPrompts: (await this.loadAllPrompts()).length
+    })
+
+    console.log(`💾 Prompt saved: ${prompt.title}`)
+    return promptData
+
+  } catch (error) {
+    console.error('❌ Failed to save prompt:', error)
+    throw new Error(`Failed to save prompt: ${error.message}`)
+  }
+}
+
+/**
+ * Load a specific prompt by ID
+ */
+async loadPrompt(promptId) {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    if (this.browserMode) {
+      const prompts = this._getBrowserStorage('projiki-prompts') || []
+      const prompt = prompts.find(p => p.id === promptId)
+      
+      if (!prompt) {
+        throw new Error(`Prompt not found: ${promptId}`)
+      }
+      
+      return prompt
+    } else {
+      const promptsDir = path.join(this.basePath, 'prompts')
+      const promptFile = path.join(promptsDir, `${sanitize(promptId)}.json`)
+
+      if (!(await fs.pathExists(promptFile))) {
+        throw new Error(`Prompt not found: ${promptId}`)
+      }
+
+      const prompt = await fs.readJson(promptFile)
+      console.log(`📂 Prompt loaded: ${prompt.title}`)
+      return prompt
+    }
+
+  } catch (error) {
+    console.error('❌ Failed to load prompt:', error)
+    throw new Error(`Failed to load prompt: ${error.message}`)
+  }
+}
+
+/**
+ * Load all prompts
+ */
+async loadAllPrompts() {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    if (this.browserMode) {
+      const prompts = this._getBrowserStorage('projiki-prompts') || []
+      console.log(`📚 Loaded ${prompts.length} prompts from localStorage`)
+      return prompts.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+    } else {
+      const prompts = []
+      const promptsDir = path.join(this.basePath, 'prompts')
+      
+      // Ensure prompts directory exists
+      await fs.ensureDir(promptsDir)
+      
+      const promptFiles = await fs.readdir(promptsDir)
+
+      for (const fileName of promptFiles) {
+        if (fileName.endsWith('.json')) {
+          const promptFile = path.join(promptsDir, fileName)
+          
+          try {
+            const prompt = await fs.readJson(promptFile)
+            prompts.push(prompt)
+          } catch (error) {
+            console.warn(`⚠️ Skipping corrupted prompt: ${fileName}`, error.message)
+          }
+        }
+      }
+
+      // Sort by last updated
+      prompts.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+
+      console.log(`📚 Loaded ${prompts.length} prompts`)
+      return prompts
+    }
+
+  } catch (error) {
+    console.error('❌ Failed to load prompts:', error)
+    throw new Error(`Failed to load prompts: ${error.message}`)
+  }
+}
+
+/**
+ * Delete a prompt
+ */
+async deletePrompt(promptId) {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    if (this.browserMode) {
+      const prompts = this._getBrowserStorage('projiki-prompts') || []
+      const filteredPrompts = prompts.filter(p => p.id !== promptId)
+      this._setBrowserStorage('projiki-prompts', filteredPrompts)
+    } else {
+      const promptsDir = path.join(this.basePath, 'prompts')
+      const promptFile = path.join(promptsDir, `${sanitize(promptId)}.json`)
+      
+      if (await fs.pathExists(promptFile)) {
+        await fs.remove(promptFile)
+      }
+    }
+
+    console.log(`🗑️ Prompt deleted: ${promptId}`)
+
+  } catch (error) {
+    console.error('❌ Failed to delete prompt:', error)
+    throw new Error(`Failed to delete prompt: ${error.message}`)
+  }
+}
+
+// =============================================================================
+// CODE SNIPPET OPERATIONS
+// =============================================================================
+
+/**
+ * Save a code snippet to the file system or localStorage
+ */
+async saveSnippet(snippet) {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    const snippetData = {
+      ...snippet,
+      savedAt: new Date().toISOString(),
+      version: '1.0.0'
+    }
+
+    if (this.browserMode) {
+      // Browser mode: save to localStorage
+      const snippets = this._getBrowserStorage('projiki-snippets') || []
+      const existingIndex = snippets.findIndex(s => s.id === snippet.id)
+      
+      if (existingIndex >= 0) {
+        snippets[existingIndex] = snippetData
+      } else {
+        snippets.push(snippetData)
+      }
+      
+      this._setBrowserStorage('projiki-snippets', snippets)
+    } else {
+      // Electron mode: save to file system
+      const snippetsDir = path.join(this.basePath, 'snippets')
+      await fs.ensureDir(snippetsDir)
+      
+      const snippetFile = path.join(snippetsDir, `${sanitize(snippet.id)}.json`)
+      await fs.writeJson(snippetFile, snippetData, { spaces: 2 })
+    }
+
+    // Update statistics
+    await this.updateStatistics({ 
+      lastSave: new Date().toISOString(),
+      totalSnippets: (await this.loadAllSnippets()).length
+    })
+
+    console.log(`💾 Snippet saved: ${snippet.title}`)
+    return snippetData
+
+  } catch (error) {
+    console.error('❌ Failed to save snippet:', error)
+    throw new Error(`Failed to save snippet: ${error.message}`)
+  }
+}
+
+/**
+ * Load a specific snippet by ID
+ */
+async loadSnippet(snippetId) {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    if (this.browserMode) {
+      const snippets = this._getBrowserStorage('projiki-snippets') || []
+      const snippet = snippets.find(s => s.id === snippetId)
+      
+      if (!snippet) {
+        throw new Error(`Snippet not found: ${snippetId}`)
+      }
+      
+      return snippet
+    } else {
+      const snippetsDir = path.join(this.basePath, 'snippets')
+      const snippetFile = path.join(snippetsDir, `${sanitize(snippetId)}.json`)
+
+      if (!(await fs.pathExists(snippetFile))) {
+        throw new Error(`Snippet not found: ${snippetId}`)
+      }
+
+      const snippet = await fs.readJson(snippetFile)
+      console.log(`📂 Snippet loaded: ${snippet.title}`)
+      return snippet
+    }
+
+  } catch (error) {
+    console.error('❌ Failed to load snippet:', error)
+    throw new Error(`Failed to load snippet: ${error.message}`)
+  }
+}
+
+/**
+ * Load all snippets
+ */
+async loadAllSnippets() {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    if (this.browserMode) {
+      const snippets = this._getBrowserStorage('projiki-snippets') || []
+      console.log(`📚 Loaded ${snippets.length} snippets from localStorage`)
+      return snippets.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+    } else {
+      const snippets = []
+      const snippetsDir = path.join(this.basePath, 'snippets')
+      
+      // Ensure snippets directory exists
+      await fs.ensureDir(snippetsDir)
+      
+      const snippetFiles = await fs.readdir(snippetsDir)
+
+      for (const fileName of snippetFiles) {
+        if (fileName.endsWith('.json')) {
+          const snippetFile = path.join(snippetsDir, fileName)
+          
+          try {
+            const snippet = await fs.readJson(snippetFile)
+            snippets.push(snippet)
+          } catch (error) {
+            console.warn(`⚠️ Skipping corrupted snippet: ${fileName}`, error.message)
+          }
+        }
+      }
+
+      // Sort by last updated
+      snippets.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+
+      console.log(`📚 Loaded ${snippets.length} snippets`)
+      return snippets
+    }
+
+  } catch (error) {
+    console.error('❌ Failed to load snippets:', error)
+    throw new Error(`Failed to load snippets: ${error.message}`)
+  }
+}
+
+/**
+ * Delete a snippet
+ */
+async deleteSnippet(snippetId) {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    if (this.browserMode) {
+      const snippets = this._getBrowserStorage('projiki-snippets') || []
+      const filteredSnippets = snippets.filter(s => s.id !== snippetId)
+      this._setBrowserStorage('projiki-snippets', filteredSnippets)
+    } else {
+      const snippetsDir = path.join(this.basePath, 'snippets')
+      const snippetFile = path.join(snippetsDir, `${sanitize(snippetId)}.json`)
+      
+      if (await fs.pathExists(snippetFile)) {
+        await fs.remove(snippetFile)
+      }
+    }
+
+    console.log(`🗑️ Snippet deleted: ${snippetId}`)
+
+  } catch (error) {
+    console.error('❌ Failed to delete snippet:', error)
+    throw new Error(`Failed to delete snippet: ${error.message}`)
+  }
+}
+
+// =============================================================================
+// VIBE CODER SESSION DATA
+// =============================================================================
+
+/**
+ * Save vibe coder session data (unsorted bin, recent activity, etc.)
+ */
+async saveVibeSession(sessionData) {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    const vibeData = {
+      ...sessionData,
+      savedAt: new Date().toISOString(),
+      version: '1.0.0'
+    }
+
+    if (this.browserMode) {
+      this._setBrowserStorage('projiki-vibe-session', vibeData)
+    } else {
+      const vibeFile = path.join(this.basePath, 'vibe-session.json')
+      await fs.writeJson(vibeFile, vibeData, { spaces: 2 })
+    }
+
+    console.log('💾 Vibe session data saved')
+    return vibeData
+
+  } catch (error) {
+    console.error('❌ Failed to save vibe session:', error)
+    throw new Error(`Failed to save vibe session: ${error.message}`)
+  }
+}
+
+/**
+ * Load vibe coder session data
+ */
+async loadVibeSession() {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    if (this.browserMode) {
+      const vibeData = this._getBrowserStorage('projiki-vibe-session')
+      if (!vibeData) {
+        return this.createDefaultVibeSession()
+      }
+      return vibeData
+    } else {
+      const vibeFile = path.join(this.basePath, 'vibe-session.json')
+      
+      if (!(await fs.pathExists(vibeFile))) {
+        return this.createDefaultVibeSession()
+      }
+
+      const vibeData = await fs.readJson(vibeFile)
+      console.log('📂 Vibe session data loaded')
+      return vibeData
+    }
+
+  } catch (error) {
+    console.error('❌ Failed to load vibe session:', error)
+    return this.createDefaultVibeSession()
+  }
+}
+
+/**
+ * Create default vibe session data
+ */
+async createDefaultVibeSession() {
+  const defaultSession = {
+    unsortedBin: [],
+    recentActivity: [],
+    lastActiveProject: null,
+    lastActiveTask: null,
+    lastActivePrompt: null,
+    lastActiveSnippet: null,
+    sessionStartTime: new Date().toISOString(),
+    flowState: {
+      mode: 'structured',
+      focusTime: 0,
+      distractionCount: 0
+    },
+    quickNotes: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+
+  await this.saveVibeSession(defaultSession)
+  return defaultSession
+}
+
   // =============================================================================
   // SETTINGS & PREFERENCES
   // =============================================================================
