@@ -36,6 +36,14 @@
 │   │   │   │   ├── ProjectFilters.jsx
 │   │   │   │   ├── ProjectForm.jsx
 │   │   │   │   └── ProjectGrid.jsx
+│   │   │   ├── prompts
+│   │   │   │   ├── index.js
+│   │   │   │   ├── PromptCard.jsx
+│   │   │   │   └── PromptForm.jsx
+│   │   │   ├── snippets
+│   │   │   │   ├── index.js
+│   │   │   │   ├── SnippetCard.jsx
+│   │   │   │   └── SnippetForm.jsx
 │   │   │   ├── SplashScreen.jsx
 │   │   │   ├── StoreProvider.jsx
 │   │   │   ├── tasks
@@ -83,7 +91,9 @@
 │   │   │   ├── StoreDataIntegration.js
 │   │   │   ├── useAppStore.js
 │   │   │   ├── useProjectStore.js
+│   │   │   ├── usePromptStore.js
 │   │   │   ├── useSearchStore.js
+│   │   │   ├── useSnippetStore.js
 │   │   │   └── useTaskStore.js
 │   │   ├── styles
 │   │   │   └── index.css

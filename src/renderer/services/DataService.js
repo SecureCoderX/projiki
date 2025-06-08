@@ -753,6 +753,325 @@ async deleteSnippet(snippetId) {
 }
 
 // =============================================================================
+// NOTES OPERATIONS
+// =============================================================================
+
+/**
+ * Save a note to the file system or localStorage
+ */
+async saveNote(note) {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    const noteData = {
+      ...note,
+      savedAt: new Date().toISOString(),
+      version: '1.0.0'
+    }
+
+    if (this.browserMode) {
+      // Browser mode: save to localStorage
+      const notes = this._getBrowserStorage('projiki-notes') || []
+      const existingIndex = notes.findIndex(n => n.id === note.id)
+      
+      if (existingIndex >= 0) {
+        notes[existingIndex] = noteData
+      } else {
+        notes.push(noteData)
+      }
+      
+      this._setBrowserStorage('projiki-notes', notes)
+    } else {
+      // Electron mode: save to file system
+      const notesDir = path.join(this.basePath, 'notes')
+      await fs.ensureDir(notesDir)
+      
+      const noteFile = path.join(notesDir, `${sanitize(note.id)}.json`)
+      await fs.writeJson(noteFile, noteData, { spaces: 2 })
+    }
+
+    // Update statistics
+    await this.updateStatistics({ 
+      lastSave: new Date().toISOString(),
+      totalNotes: (await this.loadAllNotes()).length
+    })
+
+    console.log(`💾 Note saved: ${note.title}`)
+    return noteData
+
+  } catch (error) {
+    console.error('❌ Failed to save note:', error)
+    throw new Error(`Failed to save note: ${error.message}`)
+  }
+}
+
+/**
+ * Load a specific note by ID
+ */
+async loadNote(noteId) {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    if (this.browserMode) {
+      const notes = this._getBrowserStorage('projiki-notes') || []
+      const note = notes.find(n => n.id === noteId)
+      
+      if (!note) {
+        throw new Error(`Note not found: ${noteId}`)
+      }
+      
+      return note
+    } else {
+      const notesDir = path.join(this.basePath, 'notes')
+      const noteFile = path.join(notesDir, `${sanitize(noteId)}.json`)
+
+      if (!(await fs.pathExists(noteFile))) {
+        throw new Error(`Note not found: ${noteId}`)
+      }
+
+      const note = await fs.readJson(noteFile)
+      console.log(`📂 Note loaded: ${note.title}`)
+      return note
+    }
+
+  } catch (error) {
+    console.error('❌ Failed to load note:', error)
+    throw new Error(`Failed to load note: ${error.message}`)
+  }
+}
+
+/**
+ * Load all notes
+ */
+async loadAllNotes() {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    if (this.browserMode) {
+      const notes = this._getBrowserStorage('projiki-notes') || []
+      console.log(`📚 Loaded ${notes.length} notes from localStorage`)
+      return notes.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+    } else {
+      const notes = []
+      const notesDir = path.join(this.basePath, 'notes')
+      
+      // Ensure notes directory exists
+      await fs.ensureDir(notesDir)
+      
+      const noteFiles = await fs.readdir(notesDir)
+
+      for (const fileName of noteFiles) {
+        if (fileName.endsWith('.json')) {
+          const noteFile = path.join(notesDir, fileName)
+          
+          try {
+            const note = await fs.readJson(noteFile)
+            notes.push(note)
+          } catch (error) {
+            console.warn(`⚠️ Skipping corrupted note: ${fileName}`, error.message)
+          }
+        }
+      }
+
+      // Sort by last updated
+      notes.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+
+      console.log(`📚 Loaded ${notes.length} notes`)
+      return notes
+    }
+
+  } catch (error) {
+    console.error('❌ Failed to load notes:', error)
+    throw new Error(`Failed to load notes: ${error.message}`)
+  }
+}
+
+/**
+ * Delete a note
+ */
+async deleteNote(noteId) {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    if (this.browserMode) {
+      const notes = this._getBrowserStorage('projiki-notes') || []
+      const filteredNotes = notes.filter(n => n.id !== noteId)
+      this._setBrowserStorage('projiki-notes', filteredNotes)
+    } else {
+      const notesDir = path.join(this.basePath, 'notes')
+      const noteFile = path.join(notesDir, `${sanitize(noteId)}.json`)
+      
+      if (await fs.pathExists(noteFile)) {
+        await fs.remove(noteFile)
+      }
+    }
+
+    console.log(`🗑️ Note deleted: ${noteId}`)
+
+  } catch (error) {
+    console.error('❌ Failed to delete note:', error)
+    throw new Error(`Failed to delete note: ${error.message}`)
+  }
+}
+
+// =============================================================================
+// UNSORTED BIN & SESSION DATA
+// =============================================================================
+
+/**
+ * Save unsorted bin items
+ */
+async saveUnsortedBin(binItems) {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    const binData = {
+      items: binItems,
+      savedAt: new Date().toISOString(),
+      version: '1.0.0'
+    }
+
+    if (this.browserMode) {
+      this._setBrowserStorage('projiki-unsorted-bin', binData)
+    } else {
+      const binFile = path.join(this.basePath, 'unsorted-bin.json')
+      await fs.writeJson(binFile, binData, { spaces: 2 })
+    }
+
+    console.log('💾 Unsorted bin saved')
+    return binData
+
+  } catch (error) {
+    console.error('❌ Failed to save unsorted bin:', error)
+    throw new Error(`Failed to save unsorted bin: ${error.message}`)
+  }
+}
+
+/**
+ * Load unsorted bin items
+ */
+async loadUnsortedBin() {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    if (this.browserMode) {
+      const binData = this._getBrowserStorage('projiki-unsorted-bin')
+      if (!binData) {
+        return []
+      }
+      return binData.items || []
+    } else {
+      const binFile = path.join(this.basePath, 'unsorted-bin.json')
+      
+      if (!(await fs.pathExists(binFile))) {
+        return []
+      }
+
+      const binData = await fs.readJson(binFile)
+      console.log('📂 Unsorted bin loaded')
+      return binData.items || []
+    }
+
+  } catch (error) {
+    console.error('❌ Failed to load unsorted bin:', error)
+    return []
+  }
+}
+
+/**
+ * Save session data for "Resume where I left off"
+ */
+async saveSessionData(sessionData) {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    const sessionDataWithMeta = {
+      ...sessionData,
+      savedAt: new Date().toISOString(),
+      version: '1.0.0'
+    }
+
+    if (this.browserMode) {
+      this._setBrowserStorage('projiki-session-data', sessionDataWithMeta)
+    } else {
+      const sessionFile = path.join(this.basePath, 'session-data.json')
+      await fs.writeJson(sessionFile, sessionDataWithMeta, { spaces: 2 })
+    }
+
+    console.log('💾 Session data saved')
+    return sessionDataWithMeta
+
+  } catch (error) {
+    console.error('❌ Failed to save session data:', error)
+    throw new Error(`Failed to save session data: ${error.message}`)
+  }
+}
+
+/**
+ * Load session data
+ */
+async loadSessionData() {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    if (this.browserMode) {
+      const sessionData = this._getBrowserStorage('projiki-session-data')
+      if (!sessionData) {
+        return this.createDefaultSessionData()
+      }
+      return sessionData
+    } else {
+      const sessionFile = path.join(this.basePath, 'session-data.json')
+      
+      if (!(await fs.pathExists(sessionFile))) {
+        return this.createDefaultSessionData()
+      }
+
+      const sessionData = await fs.readJson(sessionFile)
+      console.log('📂 Session data loaded')
+      return sessionData
+    }
+
+  } catch (error) {
+    console.error('❌ Failed to load session data:', error)
+    return this.createDefaultSessionData()
+  }
+}
+
+/**
+ * Create default session data
+ */
+createDefaultSessionData() {
+  return {
+    lastActiveNote: null,
+    lastActiveProject: null,
+    lastActivePrompt: null,
+    lastActiveSnippet: null,
+    recentItems: [],
+    workingNotes: [],
+    sessionStartTime: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+}
+
+// =============================================================================
 // VIBE CODER SESSION DATA
 // =============================================================================
 

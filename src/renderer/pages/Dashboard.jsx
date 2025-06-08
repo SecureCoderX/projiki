@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, Button, Badge } from '../components/ui';
 import useProjectStore from '../stores/useProjectStore';
+import { ResumePanel } from '../components/notes';
 
 const Dashboard = () => {
   // Get projects array and compute stats safely
@@ -33,7 +34,9 @@ const Dashboard = () => {
 
   return (
     <div className="p-6 space-y-6">
+      <ResumePanel />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
         <Card>
           <div className="flex items-center justify-between">
             <div>

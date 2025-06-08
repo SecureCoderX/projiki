@@ -4,6 +4,7 @@ import useProjectStore from '../stores/useProjectStore'
 import useTaskStore from '../stores/useTaskStore'
 import usePromptStore from '../stores/usePromptStore'
 import useSnippetStore from '../stores/useSnippetStore'
+import useNotesStore from '../stores/useNotesStore'
 import useAppStore from '../stores/useAppStore'
 
 /**
@@ -18,6 +19,7 @@ const StoreProvider = ({ children }) => {
   const initializeTaskStore = useTaskStore(state => state.initialize)
   const initializePromptStore = usePromptStore(state => state.initialize)
   const initializeSnippetStore = useSnippetStore(state => state.initialize)
+  const initializeNotesStore = useNotesStore(state => state.initialize)
   const setLoading = useAppStore(state => state.setLoading)
   const addNotification = useAppStore(state => state.addNotification)
 
@@ -33,12 +35,15 @@ const StoreProvider = ({ children }) => {
         // Initialize task store
         await initializeTaskStore()
         
-        // Initialize new Phase 3.3 stores
+        // Initialize Phase 3.3 stores
         console.log('🤖 Initializing prompt store...')
         await initializePromptStore()
         
         console.log('💾 Initializing snippet store...')
         await initializeSnippetStore()
+        
+        console.log('📝 Initializing notes store...')
+        await initializeNotesStore()
         
         // Mark stores as initialized
         setStoresInitialized(true)
@@ -52,7 +57,7 @@ const StoreProvider = ({ children }) => {
           addNotification({
             type: 'success',
             title: 'Welcome to Projiki!',
-            message: 'Your project management workspace is ready.'
+            message: 'Your AI-native project management workspace is ready.'
           })
           useAppStore.getState().markAsNotFirstRun()
         }
@@ -71,7 +76,7 @@ const StoreProvider = ({ children }) => {
     }
 
     initializeStores()
-  }, [initializeProjectStore, initializeTaskStore, initializePromptStore, initializeSnippetStore, setLoading, addNotification])
+  }, [initializeProjectStore, initializeTaskStore, initializePromptStore, initializeSnippetStore, initializeNotesStore, setLoading, addNotification])
 
   // Show loading state while stores initialize
   if (!storesInitialized && !initError) {
@@ -80,7 +85,7 @@ const StoreProvider = ({ children }) => {
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <h2 className="text-lg font-semibold mb-2">Initializing Projiki</h2>
-          <p className="text-text-secondary">Loading your projects and workspace...</p>
+          <p className="text-text-secondary">Loading your projects, notes, and workspace...</p>
         </div>
       </div>
     )
