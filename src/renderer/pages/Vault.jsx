@@ -48,21 +48,32 @@ const Vault = () => {
 
   // Filter and sort prompts
   const filteredPrompts = React.useMemo(() => {
-    let filtered = prompts;
+  console.log('🐛 Starting filteredPrompts calculation');
+  console.log('🐛 prompts:', prompts);
+  console.log('🐛 prompts type:', typeof prompts, Array.isArray(prompts));
+  
+  let filtered = [...prompts]; // Start with a copy
+  console.log('🐛 After copy:', filtered);
 
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(prompt =>
-        prompt.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        prompt.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        prompt.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
+  // Filter by search term
+  if (searchTerm) {
+    console.log('🐛 Filtering by search term:', searchTerm);
+    filtered = filtered.filter(prompt =>
+      prompt.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      prompt.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      prompt.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+    console.log('🐛 After search filter:', filtered.length);
+  }
 
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      filtered = getPromptsByCategory(selectedCategory);
-    }
+  // Filter by category
+  if (selectedCategory !== 'all') {
+    console.log('🐛 Filtering by category:', selectedCategory);
+    const categoryPrompts = getPromptsByCategory(selectedCategory);
+    console.log('🐛 Category prompts:', categoryPrompts);
+    filtered = [...categoryPrompts]; // Create a copy
+    console.log('🐛 After category filter:', filtered.length);
+  }
 
     // Filter by tag
     if (selectedTag !== 'all') {

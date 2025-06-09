@@ -18,6 +18,8 @@ import Vault from './pages/Vault';
 import Snippets from './pages/Snippets';
 import Notes from './pages/Notes';
 import Settings from './pages/Settings';
+import ProjectWorkspace from './components/projects/ProjectWorkspace';
+
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(true);
@@ -71,6 +73,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/projects" element={<Projects />} />
+          <Route path="/projects/:projectId" element={<ProjectWorkspace />} />
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/vault" element={<Vault />} />
           <Route path="/snippets" element={<Snippets />} />

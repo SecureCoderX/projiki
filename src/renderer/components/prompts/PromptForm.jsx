@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Button, Input, Card } from '../ui';
 import usePromptStore from '../../stores/usePromptStore';
 
-const PromptForm = ({ isOpen, onClose, prompt = null, mode = 'create' }) => {
+const PromptForm = ({ isOpen, onClose, prompt = null, mode = 'create', defaultTags = [], defaultProjectId = null }) => {
   const { categories, createPrompt, updatePrompt } = usePromptStore();
   
   const [formData, setFormData] = useState({
@@ -24,7 +24,8 @@ const PromptForm = ({ isOpen, onClose, prompt = null, mode = 'create' }) => {
   const [errors, setErrors] = useState({});
 
   // Initialize form data when prompt prop changes
-  useEffect(() => {
+useEffect(() => {
+  if (isOpen) {
     if (prompt && mode === 'edit') {
       setFormData({
         title: prompt.title || '',
@@ -39,12 +40,12 @@ const PromptForm = ({ isOpen, onClose, prompt = null, mode = 'create' }) => {
         }
       });
     } else {
-      // Reset form for create mode
+      // Reset form for create mode with default tags
       setFormData({
         title: '',
         content: '',
         category: 'general',
-        tags: [],
+        tags: defaultTags ? [...defaultTags] : [],
         response: '',
         metadata: {
           aiModel: '',
@@ -54,7 +55,8 @@ const PromptForm = ({ isOpen, onClose, prompt = null, mode = 'create' }) => {
       });
     }
     setErrors({});
-  }, [prompt, mode, isOpen]);
+  }
+}, [isOpen, prompt, mode]); // Removed defaultTags from dependencies
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -121,43 +123,44 @@ const PromptForm = ({ isOpen, onClose, prompt = null, mode = 'create' }) => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
-    try {
-      const promptData = {
-        ...formData,
-        tags: formData.tags.filter(tag => tag.trim()), // Remove empty tags
-        metadata: {
-          ...formData.metadata,
-          // Remove empty metadata fields
-          aiModel: formData.metadata.aiModel.trim() || null,
-          language: formData.metadata.language.trim() || null,
-          project: formData.metadata.project.trim() || null
-        }
-      };
-
-      if (mode === 'edit' && prompt) {
-        await updatePrompt(prompt.id, promptData);
-      } else {
-        await createPrompt(promptData);
+  e.preventDefault();
+  
+  if (!validateForm()) {
+    return;
+  }
+  
+  setIsSubmitting(true);
+  
+  try {
+    const promptData = {
+      ...formData,
+      projectId: defaultProjectId, // Add this line to associate with project
+      tags: formData.tags.filter(tag => tag.trim()), // Remove empty tags
+      metadata: {
+        ...formData.metadata,
+        // Remove empty metadata fields
+        aiModel: formData.metadata.aiModel.trim() || null,
+        language: formData.metadata.language.trim() || null,
+        project: formData.metadata.project.trim() || null
       }
-      
-      onClose();
-    } catch (error) {
-      console.error('Failed to save prompt:', error);
-      setErrors({
-        submit: 'Failed to save prompt. Please try again.'
-      });
-    } finally {
-      setIsSubmitting(false);
+    };
+
+    if (mode === 'edit' && prompt) {
+      await updatePrompt(prompt.id, promptData);
+    } else {
+      await createPrompt(promptData);
     }
-  };
+    
+    onClose();
+  } catch (error) {
+    console.error('Failed to save prompt:', error);
+    setErrors({
+      submit: 'Failed to save prompt. Please try again.'
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const modalTitle = mode === 'edit' ? 'Edit Prompt' : 'Create New Prompt';
 

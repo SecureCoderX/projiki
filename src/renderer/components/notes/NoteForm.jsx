@@ -4,7 +4,7 @@ import { Modal, Button, Input, Card } from '../ui';
 import useNotesStore from '../../stores/useNotesStore';
 import useProjectStore from '../../stores/useProjectStore';
 
-const NoteForm = ({ isOpen, onClose, note, mode = 'create' }) => {
+const NoteForm = ({ isOpen, onClose, note, mode = 'create', defaultProjectId = null }) => {
   const { 
     createNote, 
     updateNote, 
@@ -29,30 +29,30 @@ const NoteForm = ({ isOpen, onClose, note, mode = 'create' }) => {
   const contentRef = useRef(null);
 
   // Initialize form data when note prop changes
-  useEffect(() => {
-    if (mode === 'edit' && note) {
-      setFormData({
-        title: note.title || '',
-        content: note.content || '',
-        type: note.type || 'note',
-        tags: note.tags || [],
-        projectId: note.projectId || null,
-        metadata: note.metadata || {}
-      });
-    } else {
-      // Reset form for new note
-      setFormData({
-        title: '',
-        content: '',
-        type: 'note',
-        tags: [],
-        projectId: null,
-        metadata: {}
-      });
-    }
-    setTagInput('');
-    setErrors({});
-  }, [note, mode, isOpen]);
+useEffect(() => {
+  if (mode === 'edit' && note) {
+    setFormData({
+      title: note.title || '',
+      content: note.content || '',
+      type: note.type || 'note',
+      tags: note.tags || [],
+      projectId: note.projectId || null,
+      metadata: note.metadata || {}
+    });
+  } else {
+    // Reset form for new note with default project
+    setFormData({
+      title: '',
+      content: '',
+      type: 'note',
+      tags: [],
+      projectId: defaultProjectId, // Use the default project ID
+      metadata: {}
+    });
+  }
+  setTagInput('');
+  setErrors({});
+}, [note, mode, isOpen]);
 
   // Focus content area when modal opens
   useEffect(() => {

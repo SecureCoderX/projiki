@@ -78,27 +78,28 @@ const useSnippetStore = create()(
         }),
         
       createSnippet: async (snippetData) => {
-        const newSnippet = {
-          id: uuidv4(),
-          title: snippetData.title || 'Untitled Snippet',
-          description: snippetData.description || '',
-          code: snippetData.code || '',
-          language: snippetData.language || 'javascript',
-          category: snippetData.category || 'snippet',
-          tags: snippetData.tags || [],
-          isFavorite: false,
-          usageCount: 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          metadata: {
-            framework: snippetData.framework || null,
-            version: snippetData.version || null,
-            author: snippetData.author || null,
-            project: snippetData.project || null,
-            dependencies: snippetData.dependencies || [],
-            ...snippetData.metadata
-          }
-        }
+  const newSnippet = {
+    id: uuidv4(),
+    title: snippetData.title || 'Untitled Snippet',
+    description: snippetData.description || '',
+    code: snippetData.code || '',
+    language: snippetData.language || 'javascript',
+    category: snippetData.category || 'snippet',
+    tags: snippetData.tags || [],
+    isFavorite: false,
+    usageCount: 0,
+    projectId: snippetData.projectId || null, // Add this line
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    metadata: {
+      framework: snippetData.framework || null,
+      version: snippetData.version || null,
+      author: snippetData.author || null,
+      project: snippetData.project || null,
+      dependencies: snippetData.dependencies || [],
+      ...snippetData.metadata
+    }
+  }
         
         try {
           // Save to DataService first
@@ -268,16 +269,16 @@ const useSnippetStore = create()(
       getSnippetsByTag: (tag) => get().snippets.filter(s => s.tags.includes(tag)),
       
       getRecentSnippets: (limit = 5) => {
-        return get().snippets
-          .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
-          .slice(0, limit)
-      },
+  return [...get().snippets]  // Create copy first
+    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+    .slice(0, limit)
+},
       
       getMostUsedSnippets: (limit = 5) => {
-        return get().snippets
-          .sort((a, b) => b.usageCount - a.usageCount)
-          .slice(0, limit)
-      },
+  return [...get().snippets]  // Create copy first
+    .sort((a, b) => b.usageCount - a.usageCount)
+    .slice(0, limit)
+},
       
       getSnippetsByFramework: (framework) => {
         return get().snippets.filter(s => s.metadata?.framework === framework)

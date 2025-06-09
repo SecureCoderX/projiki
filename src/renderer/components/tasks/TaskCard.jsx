@@ -1,19 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, Badge, Button } from '../ui';
+import useTaskStore from '../../stores/useTaskStore';
+import TaskForm from './TaskForm';
 
 const TaskCard = ({ 
   task, 
-  onEdit, 
-  onDelete, 
-  onDuplicate, 
-  onStatusChange,
-  onPriorityChange,
-  onSelect,
+  onUpdate,
   isDragging = false,
   dragHandleProps = {},
   showProject = false
 }) => {
+  const [showEditForm, setShowEditForm] = useState(false);
+  const updateTask = useTaskStore(state => state.updateTask);
+  const deleteTask = useTaskStore(state => state.deleteTask);
+  const createTask = useTaskStore(state => state.createTask);
+
   const statusColors = {
     todo: 'default',
     'in-progress': 'warning',
@@ -85,250 +87,259 @@ const TaskCard = ({
     return formatDate(dateString);
   };
 
-  const handleStatusClick = (e) => {
+  const handleStatusClick = async (e) => {
     e.stopPropagation();
     const statuses = ['todo', 'in-progress', 'review', 'done', 'blocked'];
     const currentIndex = statuses.indexOf(task.status);
     const nextStatus = statuses[(currentIndex + 1) % statuses.length];
-    onStatusChange?.(task.id, nextStatus);
+    
+    try {
+      console.log('🔄 Updating task status:', task.id, 'from', task.status, 'to', nextStatus);
+      await updateTask(task.id, { status: nextStatus });
+      onUpdate?.();
+    } catch (error) {
+      console.error('Failed to update task status:', error);
+    }
   };
 
-  const handlePriorityClick = (e) => {
+  const handlePriorityClick = async (e) => {
     e.stopPropagation();
     const priorities = ['low', 'medium', 'high'];
-    const currentIndex = priorities.indexOf(task.metadata.priority);
+    const currentIndex = priorities.indexOf(task.metadata?.priority || 'medium');
     const nextPriority = priorities[(currentIndex + 1) % priorities.length];
-    onPriorityChange?.(task.id, nextPriority);
+    
+    try {
+      console.log('🔄 Updating task priority:', task.id, 'to', nextPriority);
+      await updateTask(task.id, { 
+        metadata: { 
+          ...task.metadata,
+          priority: nextPriority 
+        } 
+      });
+      onUpdate?.();
+    } catch (error) {
+      console.error('Failed to update task priority:', error);
+    }
+  };
+
+  const handleEdit = (e) => {
+    e.stopPropagation();
+    console.log('✏️ Opening edit form for task:', task.title);
+    setShowEditForm(true);
+  };
+
+  const handleDuplicate = async (e) => {
+    e.stopPropagation();
+    try {
+      console.log('📋 Duplicating task:', task.title);
+      const duplicatedTask = {
+        title: `${task.title} (Copy)`,
+        content: task.content,
+        type: task.type,
+        status: 'todo',
+        projectId: task.projectId,
+        metadata: { ...task.metadata }
+      };
+      
+      await createTask(duplicatedTask);
+      onUpdate?.();
+    } catch (error) {
+      console.error('Failed to duplicate task:', error);
+    }
+  };
+
+  const handleDelete = async (e) => {
+    e.stopPropagation();
+    console.log('🗑️ Delete button clicked for task:', task.title);
+    
+    if (window.confirm(`Are you sure you want to delete "${task.title}"?`)) {
+      try {
+        console.log('🗑️ Deleting task:', task.id);
+        await deleteTask(task.id);
+        onUpdate?.();
+        console.log('✅ Task deleted successfully');
+      } catch (error) {
+        console.error('❌ Failed to delete task:', error);
+      }
+    }
+  };
+
+  const handleEditSuccess = () => {
+    console.log('✅ Task edit completed successfully');
+    setShowEditForm(false);
+    onUpdate?.();
   };
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ 
-        opacity: 1, 
-        y: 0,
-        scale: isDragging ? 1.02 : 1,
-        rotateZ: isDragging ? 2 : 0
-      }}
-      exit={{ opacity: 0, y: -20 }}
-      whileHover={{ y: -2 }}
-      transition={{ duration: 0.2 }}
-      className={isDragging ? 'z-50' : ''}
-    >
-      <Card 
-        variant="elevated" 
-        padding="medium" 
-        hover={!isDragging}
-        className={`group relative overflow-hidden cursor-pointer ${
-          isDragging ? 'shadow-2xl ring-2 ring-accent' : ''
-        }`}
-        onClick={() => onSelect?.(task)}
+    <>
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ 
+          opacity: 1, 
+          y: 0,
+          scale: isDragging ? 1.02 : 1,
+          rotateZ: isDragging ? 2 : 0
+        }}
+        exit={{ opacity: 0, y: -20 }}
+        whileHover={{ y: -2 }}
+        transition={{ duration: 0.2 }}
+        className={isDragging ? 'z-50' : ''}
       >
-        {/* Drag Handle */}
-        <div 
-          {...dragHandleProps}
-          className="absolute left-0 top-0 bottom-0 w-1 bg-accent opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
-        />
+        <Card 
+          variant="elevated" 
+          padding="medium" 
+          hover={!isDragging}
+          className={`group relative overflow-hidden cursor-pointer ${
+            isDragging ? 'shadow-2xl ring-2 ring-accent' : ''
+          }`}
+          onClick={handleEdit}
+        >
+          {/* Drag Handle */}
+          <div 
+            {...dragHandleProps}
+            className="absolute left-0 top-0 bottom-0 w-1 bg-accent opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+          />
 
-        {/* Header */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-2 mb-1">
-              <span className="text-text-muted flex-shrink-0">
-                {typeIcons[task.type]}
-              </span>
-              <h3 className="font-semibold text-text-primary truncate group-hover:text-accent transition-colors">
-                {task.title}
-              </h3>
+          {/* Header */}
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center space-x-2 mb-1">
+                <span className="text-text-muted flex-shrink-0">
+                  {typeIcons[task.type]}
+                </span>
+                <h3 className="font-semibold text-text-primary truncate group-hover:text-accent transition-colors">
+                  {task.title}
+                </h3>
+              </div>
+              
+              {task.content && (
+                <p className="text-sm text-text-muted mt-1 line-clamp-2">
+                  {task.content}
+                </p>
+              )}
             </div>
             
-            {task.content && (
-              <p className="text-sm text-text-muted mt-1 line-clamp-2">
-                {task.content}
-              </p>
-            )}
+            {/* Quick Actions */}
+            <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={handleEdit}
+                className="h-8 w-8 p-0"
+                title="Edit task"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={handleDuplicate}
+                className="h-8 w-8 p-0"
+                title="Duplicate task"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+              </Button>
+            </div>
           </div>
-          
-          {/* Quick Actions */}
-          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
-            <Button
-              variant="ghost"
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit?.(task);
-              }}
-              className="h-8 w-8 p-0"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDuplicate?.(task);
-              }}
-              className="h-8 w-8 p-0"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-              </svg>
-            </Button>
-          </div>
-        </div>
 
-        {/* Status, Type, and Priority Badges */}
-        <div className="flex items-center space-x-2 mb-4">
-          <Badge 
-            variant={statusColors[task.status]} 
-            size="small"
-            className="cursor-pointer hover:scale-105 transition-transform"
-            onClick={handleStatusClick}
-          >
-            {task.status.replace('-', ' ')}
-          </Badge>
-          
-          <Badge variant={typeColors[task.type]} size="small">
-            {task.type}
-          </Badge>
-          
-          {task.metadata?.priority && (
+          {/* Status, Type, and Priority Badges */}
+          <div className="flex items-center space-x-2 mb-4">
             <Badge 
-              variant={priorityColors[task.metadata.priority]} 
+              variant={statusColors[task.status]} 
               size="small"
               className="cursor-pointer hover:scale-105 transition-transform"
-              onClick={handlePriorityClick}
+              onClick={handleStatusClick}
             >
-              {task.metadata.priority}
+              {task.status.replace('-', ' ')}
             </Badge>
-          )}
-        </div>
-
-        {/* Tags */}
-        {task.metadata?.tags && task.metadata.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-4">
-            {task.metadata.tags.slice(0, 3).map((tag, index) => (
-              <Badge key={index} variant="outline" size="small">
-                {tag}
-              </Badge>
-            ))}
-            {task.metadata.tags.length > 3 && (
-              <Badge variant="outline" size="small">
-                +{task.metadata.tags.length - 3}
+            
+            <Badge variant={typeColors[task.type]} size="small">
+              {task.type}
+            </Badge>
+            
+            {task.metadata?.priority && (
+              <Badge 
+                variant={priorityColors[task.metadata.priority]} 
+                size="small"
+                className="cursor-pointer hover:scale-105 transition-transform"
+                onClick={handlePriorityClick}
+              >
+                {task.metadata.priority}
               </Badge>
             )}
           </div>
-        )}
 
-        {/* Time Information */}
-        <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-          <div>
-            <span className="text-text-muted">Created</span>
-            <div className="font-medium text-text-primary">
-              {formatDate(task.createdAt)}
-            </div>
-          </div>
-          <div>
-            <span className="text-text-muted">Updated</span>
-            <div className="font-medium text-text-primary">
-              {getTimeAgo(task.updatedAt)}
-            </div>
-          </div>
-        </div>
-
-        {/* Estimated/Actual Time */}
-        {(task.metadata?.estimatedTime || task.metadata?.actualTime) && (
-          <div className="mb-4">
-            <div className="flex items-center text-sm space-x-4">
-              {task.metadata.estimatedTime && (
-                <div className="flex items-center">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-1 text-text-muted">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12,6 12,12 16,14"/>
-                  </svg>
-                  <span className="text-text-muted mr-1">Est:</span>
-                  <span className="font-medium text-text-primary">
-                    {task.metadata.estimatedTime}h
-                  </span>
-                </div>
-              )}
-              
-              {task.metadata.actualTime && (
-                <div className="flex items-center">
-                  <span className="text-text-muted mr-1">Actual:</span>
-                  <span className="font-medium text-text-primary">
-                    {task.metadata.actualTime}h
-                  </span>
-                </div>
+          {/* Tags */}
+          {task.metadata?.tags && task.metadata.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-4">
+              {task.metadata.tags.slice(0, 3).map((tag, index) => (
+                <Badge key={index} variant="outline" size="small">
+                  {tag}
+                </Badge>
+              ))}
+              {task.metadata.tags.length > 3 && (
+                <Badge variant="outline" size="small">
+                  +{task.metadata.tags.length - 3}
+                </Badge>
               )}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Dependencies */}
-        {task.metadata?.dependencies && task.metadata.dependencies.length > 0 && (
-          <div className="mb-4">
-            <div className="flex items-center text-sm">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-2 text-text-muted">
-                <polyline points="16,18 22,12 16,6"/>
-                <polyline points="8,6 2,12 8,18"/>
-              </svg>
-              <span className="text-text-muted mr-2">Dependencies:</span>
-              <span className="font-medium text-text-primary">
-                {task.metadata.dependencies.length}
-              </span>
+          {/* Time Information */}
+          <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+            <div>
+              <span className="text-text-muted">Created</span>
+              <div className="font-medium text-text-primary">
+                {formatDate(task.createdAt)}
+              </div>
+            </div>
+            <div>
+              <span className="text-text-muted">Updated</span>
+              <div className="font-medium text-text-primary">
+                {getTimeAgo(task.updatedAt)}
+              </div>
             </div>
           </div>
-        )}
 
-        {/* Project Information (if showing cross-project tasks) */}
-        {showProject && (
-          <div className="mb-4">
-            <div className="flex items-center text-sm">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-2 text-text-muted">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-              </svg>
-              <span className="text-text-muted mr-2">Project:</span>
-              <span className="font-medium text-text-primary truncate">
-                {task.projectId}
-              </span>
+          {/* Footer Actions */}
+          <div className="flex items-center justify-between pt-3 border-t border-border">
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={handleDelete}
+                className="text-red-500 hover:text-red-600"
+              >
+                Delete
+              </Button>
+            </div>
+            
+            <div className="text-xs text-text-muted">
+              ID: {task.id.slice(0, 8)}...
             </div>
           </div>
-        )}
 
-        {/* Footer Actions */}
-        <div className="flex items-center justify-between pt-3 border-t border-border">
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete?.(task);
-              }}
-              className="text-red-500 hover:text-red-600"
-            >
-              Delete
-            </Button>
-          </div>
-          
-          <div className="text-xs text-text-muted">
-            ID: {task.id.slice(0, 8)}...
-          </div>
-        </div>
+          {/* Hover Effect Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+        </Card>
+      </motion.div>
 
-        {/* Hover Effect Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-      </Card>
-    </motion.div>
+      {/* Edit Form Modal */}
+      <TaskForm
+        isOpen={showEditForm}
+        onClose={() => setShowEditForm(false)}
+        task={task}
+        onSuccess={handleEditSuccess}
+      />
+    </>
   );
 };
 

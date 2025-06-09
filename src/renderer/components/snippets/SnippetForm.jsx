@@ -138,7 +138,7 @@ const detectLanguage = (code) => {
   return detected;
 };
 
-const SnippetForm = ({ isOpen, onClose, snippet, mode = 'create' }) => {
+const SnippetForm = ({ isOpen, onClose, snippet, mode = 'create', defaultProjectId = null }) => {
   const { 
     createSnippet, 
     updateSnippet, 
@@ -148,20 +148,21 @@ const SnippetForm = ({ isOpen, onClose, snippet, mode = 'create' }) => {
 
   // Form state
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    code: '',
-    language: 'javascript',
-    category: 'snippet',
-    tags: [],
-    metadata: {
-      framework: '',
-      version: '',
-      author: '',
-      project: '',
-      dependencies: []
-    }
-  });
+  title: '',
+  description: '',
+  code: '',
+  language: 'javascript',
+  category: 'snippet',
+  tags: [],
+  projectId: null, // Add this line
+  metadata: {
+    framework: '',
+    version: '',
+    author: '',
+    project: '',
+    dependencies: []
+  }
+});
 
   const [tagInput, setTagInput] = useState('');
   const [depInput, setDepInput] = useState('');
@@ -171,48 +172,48 @@ const SnippetForm = ({ isOpen, onClose, snippet, mode = 'create' }) => {
   const [userChangedLanguage, setUserChangedLanguage] = useState(false);
 
   // Initialize form data when snippet prop changes
-  useEffect(() => {
-    if (mode === 'edit' && snippet) {
-      setFormData({
-        title: snippet.title || '',
-        description: snippet.description || '',
-        code: snippet.code || '',
-        language: snippet.language || 'javascript',
-        category: snippet.category || 'snippet',
-        tags: snippet.tags || [],
-        metadata: {
-          framework: snippet.metadata?.framework || '',
-          version: snippet.metadata?.version || '',
-          author: snippet.metadata?.author || '',
-          project: snippet.metadata?.project || '',
-          dependencies: snippet.metadata?.dependencies || []
-        }
-      });
-      setUserChangedLanguage(true); // Don't auto-detect for existing snippets
-    } else {
-      // Reset form for new snippet
-      setFormData({
-        title: '',
-        description: '',
-        code: '',
-        language: 'javascript',
-        category: 'snippet',
-        tags: [],
-        metadata: {
-          framework: '',
-          version: '',
-          author: '',
-          project: '',
-          dependencies: []
-        }
-      });
-      setUserChangedLanguage(false);
-    }
-    setTagInput('');
-    setDepInput('');
-    setErrors({});
-    setAutoDetected(null);
-  }, [snippet, mode, isOpen]);
+useEffect(() => {
+  if (mode === 'edit' && snippet) {
+    setFormData({
+      title: snippet.title || '',
+      description: snippet.description || '',
+      code: snippet.code || '',
+      language: snippet.language || 'javascript',
+      category: snippet.category || 'snippet',
+      tags: snippet.tags || [],
+      metadata: {
+        framework: snippet.metadata?.framework || '',
+        version: snippet.metadata?.version || '',
+        author: snippet.metadata?.author || '',
+        project: snippet.metadata?.project || '',
+        dependencies: snippet.metadata?.dependencies || []
+      }
+    });
+    setUserChangedLanguage(true); // Don't auto-detect for existing snippets
+  } else {
+    // Reset form for new snippet with default project
+    setFormData({
+      title: '',
+      description: '',
+      code: '',
+      language: 'javascript',
+      category: 'snippet',
+      tags: [],
+      metadata: {
+        framework: '',
+        version: '',
+        author: '',
+        project: '',
+        dependencies: []
+      }
+    });
+    setUserChangedLanguage(false);
+  }
+  setTagInput('');
+  setDepInput('');
+  setErrors({});
+  setAutoDetected(null);
+}, [snippet, mode, isOpen]);
 
   // Handle form field changes
   const handleChange = (field, value) => {
@@ -330,39 +331,40 @@ const SnippetForm = ({ isOpen, onClose, snippet, mode = 'create' }) => {
   };
 
   // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    
-    setIsSubmitting(true);
-    try {
-      const snippetData = {
-        ...formData,
-        tags: formData.tags.filter(tag => tag.trim()),
-        metadata: {
-          ...formData.metadata,
-          framework: formData.metadata.framework.trim() || null,
-          version: formData.metadata.version.trim() || null,
-          author: formData.metadata.author.trim() || null,
-          project: formData.metadata.project.trim() || null,
-          dependencies: formData.metadata.dependencies.filter(dep => dep.trim())
-        }
-      };
-
-      if (mode === 'edit' && snippet) {
-        await updateSnippet(snippet.id, snippetData);
-      } else {
-        await createSnippet(snippetData);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!validateForm()) return;
+  
+  setIsSubmitting(true);
+  try {
+    const snippetData = {
+      ...formData,
+      projectId: defaultProjectId, // Add this line
+      tags: formData.tags.filter(tag => tag.trim()),
+      metadata: {
+        ...formData.metadata,
+        framework: formData.metadata.framework.trim() || null,
+        version: formData.metadata.version.trim() || null,
+        author: formData.metadata.author.trim() || null,
+        project: formData.metadata.project.trim() || null,
+        dependencies: formData.metadata.dependencies.filter(dep => dep.trim())
       }
-      
-      onClose();
-    } catch (error) {
-      console.error('Failed to save snippet:', error);
-      setErrors({ submit: 'Failed to save snippet. Please try again.' });
-    } finally {
-      setIsSubmitting(false);
+    };
+
+    if (mode === 'edit' && snippet) {
+      await updateSnippet(snippet.id, snippetData);
+    } else {
+      await createSnippet(snippetData);
     }
-  };
+    
+    onClose();
+  } catch (error) {
+    console.error('Failed to save snippet:', error);
+    setErrors({ submit: 'Failed to save snippet. Please try again.' });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <Modal

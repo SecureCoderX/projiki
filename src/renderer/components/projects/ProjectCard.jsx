@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, Badge, Button } from '../ui';
+import { useNavigate } from 'react-router-dom';
 
 const ProjectCard = ({ 
   project, 
@@ -16,6 +17,8 @@ const ProjectCard = ({
     completed: 'primary',
     archived: 'default'
   };
+
+  const navigate = useNavigate();
 
   const priorityColors = {
     low: 'default',
@@ -62,7 +65,7 @@ const ProjectCard = ({
         padding="medium" 
         hover={true}
         className="group relative overflow-hidden cursor-pointer"
-        onClick={() => onSelect?.(project)}
+        onClick={() => navigate(`/projects/${project.id}`)}
       >
         {/* Header */}
         <div className="flex items-start justify-between mb-3">

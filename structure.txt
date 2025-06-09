@@ -30,12 +30,21 @@
 │   │   │   │   └── Sidebar.jsx
 │   │   │   ├── Loading.jsx
 │   │   │   ├── LoadingOverlay.jsx
+│   │   │   ├── notes
+│   │   │   │   ├── index.js
+│   │   │   │   ├── NoteCard.jsx
+│   │   │   │   ├── NoteForm.jsx
+│   │   │   │   ├── QuickCapture.jsx
+│   │   │   │   ├── ResumePanel.jsx
+│   │   │   │   └── UnsortedBin.jsx
 │   │   │   ├── ProgressBar.jsx
 │   │   │   ├── projects
+│   │   │   │   ├── index.js
 │   │   │   │   ├── ProjectCard.jsx
 │   │   │   │   ├── ProjectFilters.jsx
 │   │   │   │   ├── ProjectForm.jsx
-│   │   │   │   └── ProjectGrid.jsx
+│   │   │   │   ├── ProjectGrid.jsx
+│   │   │   │   └── ProjectWorkspace.jsx
 │   │   │   ├── prompts
 │   │   │   │   ├── index.js
 │   │   │   │   ├── PromptCard.jsx
@@ -62,6 +71,7 @@
 │   │   │       ├── Badge.jsx
 │   │   │       ├── Button.jsx
 │   │   │       ├── Card.jsx
+│   │   │       ├── CodeEditor.jsx
 │   │   │       ├── index.js
 │   │   │       ├── Input.jsx
 │   │   │       ├── Modal.jsx
@@ -90,6 +100,7 @@
 │   │   │   ├── index.js
 │   │   │   ├── StoreDataIntegration.js
 │   │   │   ├── useAppStore.js
+│   │   │   ├── useNotesStore.js
 │   │   │   ├── useProjectStore.js
 │   │   │   ├── usePromptStore.js
 │   │   │   ├── useSearchStore.js

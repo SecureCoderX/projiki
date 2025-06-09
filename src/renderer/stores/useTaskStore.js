@@ -45,142 +45,184 @@ const useTaskStore = create()(
         }),
         
       createTask: async (taskData) => {
-        const currentProject = useAppStore.getState().currentProject
-        
-        if (!currentProject) {
-          useAppStore.getState().addNotification({
-            type: 'error',
-            title: 'No Project Selected',
-            message: 'Please select a project before creating tasks.'
-          })
-          return
-        }
-        
-        const newTask = {
-          id: uuidv4(),
-          projectId: currentProject.id,
-          title: taskData.title || 'Untitled Task',
-          content: taskData.content || '',
-          type: taskData.type || 'task', // 'task' | 'note' | 'snippet' | 'idea'
-          status: taskData.status || 'todo',
-          mode: taskData.mode || currentProject.mode,
-          position: taskData.position || { x: 0, y: 0 },
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          metadata: {
-            tags: taskData.tags || [],
-            priority: taskData.priority || 'medium',
-            estimatedTime: taskData.estimatedTime || null,
-            actualTime: taskData.actualTime || null,
-            dependencies: taskData.dependencies || [],
-            assignee: taskData.assignee || null,
-            ...taskData.metadata
-          }
-        }
-        
-        try {
-          // Save task to DataService
-          await DataService.saveTask(currentProject.id, newTask)
-          
-          // Update store
-          set((state) => {
-            state.tasks.push(newTask)
-          })
-          
-          useAppStore.getState().addNotification({
-            type: 'success',
-            title: 'Task Created',
-            message: `Task "${newTask.title}" has been created.`
-          })
-          
-          useAppStore.getState().updateLastSaved()
-          console.log('✅ Task created and saved:', newTask.title)
-          return newTask
-          
-        } catch (error) {
-          console.error('❌ Failed to create task:', error)
-          useAppStore.getState().addNotification({
-            type: 'error',
-            title: 'Task Creation Failed',
-            message: `Failed to create task: ${error.message}`
-          })
-          throw error
-        }
-      },
-        
-      updateTask: async (taskId, updates) => {
-        const currentProject = useAppStore.getState().currentProject
-        if (!currentProject) return
-        
-        try {
-          const taskIndex = get().tasks.findIndex(t => t.id === taskId)
-          
-          if (taskIndex !== -1) {
-            const updatedTask = {
-              ...get().tasks[taskIndex],
-              ...updates,
-              updatedAt: new Date().toISOString()
-            }
-            
-            // Save to DataService
-            await DataService.saveTask(currentProject.id, updatedTask)
-            
-            // Update store
-            set((state) => {
-              state.tasks[taskIndex] = updatedTask
-            })
-            
-            useAppStore.getState().updateLastSaved()
-            console.log('✅ Task updated and saved:', updatedTask.title)
-          }
-        } catch (error) {
-          console.error('❌ Failed to update task:', error)
-          useAppStore.getState().addNotification({
-            type: 'error',
-            title: 'Update Failed',
-            message: `Failed to update task: ${error.message}`
-          })
-          throw error
-        }
-      },
+  console.log('🐛 STORE DEBUG: createTask called with:', taskData);
+  
+  // Don't rely on currentProject from app store - use the projectId from taskData
+  if (!taskData.projectId) {
+    console.log('🐛 STORE DEBUG: No projectId provided in taskData');
+    useAppStore.getState().addNotification({
+      type: 'error',
+      title: 'Missing Project ID',
+      message: 'Task must be associated with a project.'
+    });
+    throw new Error('Project ID is required');
+  }
+
+  console.log('🐛 STORE DEBUG: Using projectId from taskData:', taskData.projectId);
+
+  const newTask = {
+    id: uuidv4(),
+    projectId: taskData.projectId,
+    title: taskData.title || 'Untitled Task',
+    content: taskData.content || '',
+    type: taskData.type || 'task',
+    status: taskData.status || 'todo',
+    mode: taskData.mode || 'structured', // Default mode instead of currentProject.mode
+    position: taskData.position || { x: 0, y: 0 },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    metadata: {
+      tags: taskData.tags || [],
+      priority: taskData.priority || 'medium',
+      estimatedTime: taskData.estimatedTime || null,
+      actualTime: taskData.actualTime || null,
+      dependencies: taskData.dependencies || [],
+      assignee: taskData.assignee || null,
+      ...taskData.metadata
+    }
+  };
+
+  console.log('🐛 STORE DEBUG: New task object created:', newTask);
+
+  try {
+    // Save task to DataService
+    console.log('🐛 STORE DEBUG: Calling DataService.saveTask...');
+    await DataService.saveTask(newTask.projectId, newTask);
+    console.log('🐛 STORE DEBUG: DataService.saveTask completed');
+
+    // Update store
+    console.log('🐛 STORE DEBUG: Updating store state...');
+    set((state) => {
+      console.log('🐛 STORE DEBUG: Current tasks in store:', state.tasks.length);
+      state.tasks.push(newTask);
+      console.log('🐛 STORE DEBUG: Tasks after adding:', state.tasks.length);
+    });
+
+    useAppStore.getState().addNotification({
+      type: 'success',
+      title: 'Task Created',
+      message: `Task "${newTask.title}" has been created.`
+    });
+
+    useAppStore.getState().updateLastSaved();
+    console.log('✅ Task created and saved:', newTask.title);
+    return newTask;
+
+  } catch (error) {
+    console.error('❌ Failed to create task:', error);
+    useAppStore.getState().addNotification({
+      type: 'error',
+      title: 'Task Creation Failed',
+      message: `Failed to create task: ${error.message}`
+    });
+    throw error;
+  }
+},
         
       deleteTask: async (taskId) => {
-        const currentProject = useAppStore.getState().currentProject
-        if (!currentProject) return
-        
-        try {
-          const taskToDelete = get().tasks.find(t => t.id === taskId)
-          
-          if (taskToDelete) {
-            // Remove from current tasks and save to DataService
-            const updatedTasks = get().tasks.filter(t => t.id !== taskId)
-            await DataService.saveTasks(currentProject.id, updatedTasks)
-            
-            // Update store
-            set((state) => {
-              state.tasks = state.tasks.filter(t => t.id !== taskId)
-              state.selectedTasks = state.selectedTasks.filter(id => id !== taskId)
-            })
-            
-            useAppStore.getState().addNotification({
-              type: 'info',
-              title: 'Task Deleted',
-              message: `Task "${taskToDelete.title}" has been deleted.`
-            })
-            
-            useAppStore.getState().updateLastSaved()
-            console.log('✅ Task deleted:', taskToDelete.title)
-          }
-        } catch (error) {
-          console.error('❌ Failed to delete task:', error)
-          useAppStore.getState().addNotification({
-            type: 'error',
-            title: 'Delete Failed',
-            message: `Failed to delete task: ${error.message}`
-          })
-          throw error
-        }
-      },
+  try {
+    console.log('🗑️ Starting delete for task:', taskId);
+    
+    const taskToDelete = get().tasks.find(t => t.id === taskId)
+    
+    if (!taskToDelete) {
+      console.log('❌ Task not found for deletion:', taskId);
+      throw new Error('Task not found');
+    }
+    
+    console.log('🗑️ Found task to delete:', taskToDelete.title);
+    const projectId = taskToDelete.projectId; // Get projectId from the task itself
+    
+    // Remove from current tasks and save to DataService
+    const updatedTasks = get().tasks.filter(t => t.id !== taskId)
+    console.log('🗑️ Updated tasks array length:', updatedTasks.length);
+    
+    await DataService.saveTasks(projectId, updatedTasks)
+    console.log('🗑️ DataService.saveTasks completed');
+    
+    // Update store
+    set((state) => {
+      state.tasks = state.tasks.filter(t => t.id !== taskId)
+      state.selectedTasks = state.selectedTasks.filter(id => id !== taskId)
+      console.log('🗑️ Store updated, new task count:', state.tasks.length);
+    })
+    
+    useAppStore.getState().addNotification({
+      type: 'info',
+      title: 'Task Deleted',
+      message: `Task "${taskToDelete.title}" has been deleted.`
+    })
+    
+    useAppStore.getState().updateLastSaved()
+    console.log('✅ Task deleted successfully:', taskToDelete.title)
+    
+  } catch (error) {
+    console.error('❌ Failed to delete task:', error)
+    useAppStore.getState().addNotification({
+      type: 'error',
+      title: 'Delete Failed',
+      message: `Failed to delete task: ${error.message}`
+    })
+    throw error
+  }
+},
+
+      updateTask: async (taskId, updates) => {
+  try {
+    console.log('🔄 Updating task:', taskId, 'with updates:', updates);
+    
+    const taskToUpdate = get().tasks.find(t => t.id === taskId)
+    if (!taskToUpdate) {
+      throw new Error('Task not found')
+    }
+    
+    const updatedTask = {
+      ...taskToUpdate,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+      metadata: {
+        ...taskToUpdate.metadata,
+        ...updates.metadata
+      }
+    }
+    
+    console.log('🔄 Updated task object:', updatedTask);
+    
+    // Update in DataService using the task's projectId
+    await DataService.saveTask(updatedTask.projectId, updatedTask)
+    console.log('🔄 DataService.saveTask completed');
+    
+    // Update store
+    set((state) => {
+      const index = state.tasks.findIndex(t => t.id === taskId)
+      if (index !== -1) {
+        state.tasks[index] = updatedTask
+        console.log('🔄 Task updated in store at index:', index);
+      } else {
+        console.log('❌ Task not found in store for update');
+      }
+    })
+    
+    useAppStore.getState().addNotification({
+      type: 'success',
+      title: 'Task Updated',
+      message: `Task "${updatedTask.title}" has been updated.`
+    })
+    
+    useAppStore.getState().updateLastSaved()
+    console.log('✅ Task updated:', updatedTask.title)
+    return updatedTask
+    
+  } catch (error) {
+    console.error('❌ Failed to update task:', error)
+    useAppStore.getState().addNotification({
+      type: 'error',
+      title: 'Update Failed',
+      message: `Failed to update task: ${error.message}`
+    })
+    throw error
+  }
+},
         
       moveTask: async (taskId, newPosition) => {
         await get().updateTask(taskId, { position: newPosition })

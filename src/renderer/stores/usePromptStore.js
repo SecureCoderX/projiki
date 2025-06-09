@@ -48,24 +48,25 @@ const usePromptStore = create()(
         }),
         
       createPrompt: async (promptData) => {
-        const newPrompt = {
-          id: uuidv4(),
-          title: promptData.title || 'Untitled Prompt',
-          content: promptData.content || '',
-          category: promptData.category || 'general',
-          tags: promptData.tags || [],
-          response: promptData.response || '',
-          isFavorite: false,
-          usageCount: 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          metadata: {
-            aiModel: promptData.aiModel || null,
-            language: promptData.language || null,
-            project: promptData.project || null,
-            ...promptData.metadata
-          }
-        }
+  const newPrompt = {
+    id: uuidv4(),
+    title: promptData.title || 'Untitled Prompt',
+    content: promptData.content || '',
+    category: promptData.category || 'general',
+    tags: promptData.tags || [],
+    response: promptData.response || '',
+    isFavorite: false,
+    usageCount: 0,
+    projectId: promptData.projectId || null, // Add this line
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    metadata: {
+      aiModel: promptData.aiModel || null,
+      language: promptData.language || null,
+      project: promptData.project || null,
+      ...promptData.metadata
+    }
+  }
         
         try {
           // Save to DataService first
@@ -233,16 +234,16 @@ const usePromptStore = create()(
       getPromptsByTag: (tag) => get().prompts.filter(p => p.tags.includes(tag)),
       
       getRecentPrompts: (limit = 5) => {
-        return get().prompts
-          .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
-          .slice(0, limit)
-      },
+  return [...get().prompts]  // Create copy first
+    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+    .slice(0, limit)
+},
       
       getMostUsedPrompts: (limit = 5) => {
-        return get().prompts
-          .sort((a, b) => b.usageCount - a.usageCount)
-          .slice(0, limit)
-      },
+  return [...get().prompts]  // Create copy first
+    .sort((a, b) => b.usageCount - a.usageCount)
+    .slice(0, limit)
+},
       
       getAllTags: () => {
         const allTags = get().prompts.flatMap(p => p.tags)

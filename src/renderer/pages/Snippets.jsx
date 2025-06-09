@@ -52,57 +52,61 @@ const Snippets = () => {
 
   // Filter and sort snippets
   const filteredSnippets = React.useMemo(() => {
-    let filtered = snippets;
+  let filtered = [...snippets]; // Start with a copy
 
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(snippet =>
-        snippet.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        snippet.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        snippet.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        snippet.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
+  // Filter by search term
+  if (searchTerm) {
+    filtered = filtered.filter(snippet =>
+      snippet.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      snippet.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      snippet.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      snippet.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }
 
-    // Filter by language
-    if (selectedLanguage !== 'all') {
-      filtered = getSnippetsByLanguage(selectedLanguage);
-    }
+  // Filter by language
+  if (selectedLanguage !== 'all') {
+    const languageSnippets = getSnippetsByLanguage(selectedLanguage);
+    filtered = [...languageSnippets]; // Create a copy
+  }
 
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      filtered = getSnippetsByCategory(selectedCategory);
-    }
+  // Filter by category
+  if (selectedCategory !== 'all') {
+    const categorySnippets = getSnippetsByCategory(selectedCategory);
+    filtered = [...categorySnippets]; // Create a copy
+  }
 
-    // Filter by framework
-    if (selectedFramework !== 'all') {
-      filtered = filtered.filter(snippet => snippet.metadata?.framework === selectedFramework);
-    }
+  // Filter by framework
+  if (selectedFramework !== 'all') {
+    filtered = filtered.filter(snippet => snippet.metadata?.framework === selectedFramework);
+  }
 
-    // Filter by tag
-    if (selectedTag !== 'all') {
-      filtered = getSnippetsByTag(selectedTag);
-    }
+  // Filter by tag
+  if (selectedTag !== 'all') {
+    const tagSnippets = getSnippetsByTag(selectedTag);
+    filtered = [...tagSnippets]; // Create a copy
+  }
 
-    // Filter by favorites
-    if (showFavoritesOnly) {
-      filtered = filtered.filter(snippet => snippet.isFavorite);
-    }
+  // Filter by favorites
+  if (showFavoritesOnly) {
+    filtered = filtered.filter(snippet => snippet.isFavorite);
+  }
 
-    // Sort snippets
-    switch (sortBy) {
-      case 'created':
-        return filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      case 'updated':
-        return filtered.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-      case 'usage':
-        return filtered.sort((a, b) => b.usageCount - a.usageCount);
-      case 'alphabetical':
-        return filtered.sort((a, b) => a.title.localeCompare(b.title));
-      default:
-        return filtered;
-    }
-  }, [snippets, searchTerm, selectedLanguage, selectedCategory, selectedFramework, selectedTag, sortBy, showFavoritesOnly, getSnippetsByLanguage, getSnippetsByCategory, getSnippetsByTag]);
+  // Sort snippets (create a copy before sorting)
+  const sortedFiltered = [...filtered];
+  switch (sortBy) {
+    case 'created':
+      return sortedFiltered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    case 'updated':
+      return sortedFiltered.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    case 'usage':
+      return sortedFiltered.sort((a, b) => b.usageCount - a.usageCount);
+    case 'alphabetical':
+      return sortedFiltered.sort((a, b) => a.title.localeCompare(b.title));
+    default:
+      return sortedFiltered;
+  }
+}, [snippets, searchTerm, selectedLanguage, selectedCategory, selectedFramework, selectedTag, sortBy, showFavoritesOnly, getSnippetsByLanguage, getSnippetsByCategory, getSnippetsByTag]);
 
   // Event handlers
   const handleCreateSnippet = () => {

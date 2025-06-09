@@ -1,8 +1,8 @@
-// Task Components Index
 export { default as TaskCard } from './TaskCard';
 export { default as TaskForm } from './TaskForm';
 export { default as TaskList } from './TaskList';
-export { default as TaskFilters } from './TaskFilters';
 export { default as KanbanBoard } from './KanbanBoard';
-export { default as KanbanColumn } from './KanbanColumn';
+export { default as TimelineView } from './TimelineView';
+export { default as CreativeView } from './CreativeView';
+export { default as TaskFilters } from './TaskFilters';
 export { default as ViewToggle } from './ViewToggle';
