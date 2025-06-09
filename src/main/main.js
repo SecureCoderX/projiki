@@ -26,6 +26,7 @@ function createWindow() {
     frame: false,
     icon: path.join(__dirname, '../assets/icon.png'),
     titleBarStyle: 'hidden',
+    skipTaskbar: false,  // Ensure taskbar icon shows
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -89,11 +90,19 @@ function createWindow() {
     mainWindow.webContents.send('window-focus-changed', { focused: false });
   });
 
-  // Handle close event
+  // FIXED: Handle close event - minimize to taskbar instead of showing dialog
   mainWindow.on('close', (event) => {
-    if (!isQuitting) {
+    if (!isQuitting && process.platform !== 'darwin') {
       event.preventDefault();
-      handleAppClose();
+      mainWindow.hide(); // Hide to taskbar instead of showing dialog
+      return;
+    }
+    
+    // On macOS, hide the window
+    if (!isQuitting && process.platform === 'darwin') {
+      event.preventDefault();
+      mainWindow.hide();
+      return;
     }
   });
 
@@ -133,14 +142,14 @@ function saveWindowState() {
   windowState.isMaximized = mainWindow.isMaximized();
 }
 
+// FIXED: Only show close confirmation when explicitly quitting
 function handleAppClose() {
-  // Show save confirmation if needed (for future implementation)
   dialog.showMessageBox(mainWindow, {
     type: 'question',
-    title: 'Close Projiki',
-    message: 'Are you sure you want to close Projiki?',
+    title: 'Quit Projiki',
+    message: 'Are you sure you want to quit Projiki completely?',
     detail: 'Any unsaved changes will be automatically saved.',
-    buttons: ['Cancel', 'Close'],
+    buttons: ['Cancel', 'Quit'],
     defaultId: 1,
     cancelId: 0,
   }).then((result) => {
@@ -161,6 +170,7 @@ app.whenReady().then(() => {
       createWindow();
     } else if (mainWindow) {
       mainWindow.show();
+      mainWindow.focus();
     }
   });
 
@@ -168,6 +178,16 @@ app.whenReady().then(() => {
   if (process.platform === 'win32') {
     app.setAppUserModelId('com.yourcompany.projiki');
   }
+
+  // FIXED: Add system tray behavior - click taskbar icon to restore
+  app.on('second-instance', () => {
+    // Someone tried to run a second instance, focus our window instead
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
 });
 
 // Handle all windows closed
@@ -204,7 +224,16 @@ ipcMain.handle('window-maximize', () => {
   }
 });
 
+// FIXED: Close button now hides to taskbar
 ipcMain.handle('window-close', () => {
+  if (mainWindow) {
+    mainWindow.hide();
+  }
+  return { success: true };
+});
+
+// NEW: Add explicit quit handler for when user really wants to quit
+ipcMain.handle('app-quit', () => {
   handleAppClose();
   return { success: true };
 });

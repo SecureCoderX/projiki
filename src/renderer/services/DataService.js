@@ -923,6 +923,197 @@ async deleteNote(noteId) {
 }
 
 // =============================================================================
+// CHANGELOG OPERATIONS
+// =============================================================================
+
+/**
+ * Save a changelog to the file system or localStorage
+ */
+async saveChangelog(changelog) {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    const changelogData = {
+      ...changelog,
+      savedAt: new Date().toISOString(),
+      version: '1.0.0'
+    }
+
+    if (this.browserMode) {
+      // Browser mode: save to localStorage
+      const changelogs = this._getBrowserStorage('projiki-changelogs') || []
+      const existingIndex = changelogs.findIndex(c => c.id === changelog.id)
+      
+      if (existingIndex >= 0) {
+        changelogs[existingIndex] = changelogData
+      } else {
+        changelogs.push(changelogData)
+      }
+      
+      this._setBrowserStorage('projiki-changelogs', changelogs)
+    } else {
+      // Electron mode: save to file system
+      const changelogsDir = path.join(this.basePath, 'changelogs')
+      await fs.ensureDir(changelogsDir)
+      
+      const changelogFile = path.join(changelogsDir, `${sanitize(changelog.id)}.json`)
+      await fs.writeJson(changelogFile, changelogData, { spaces: 2 })
+    }
+
+    // Update statistics
+    await this.updateStatistics({ 
+      lastSave: new Date().toISOString(),
+      totalChangelogs: (await this.loadAllChangelogs()).length
+    })
+
+    console.log(`💾 Changelog saved: v${changelog.version}`)
+    return changelogData
+
+  } catch (error) {
+    console.error('❌ Failed to save changelog:', error)
+    throw new Error(`Failed to save changelog: ${error.message}`)
+  }
+}
+
+/**
+ * Load a specific changelog by ID
+ */
+async loadChangelog(changelogId) {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    if (this.browserMode) {
+      const changelogs = this._getBrowserStorage('projiki-changelogs') || []
+      const changelog = changelogs.find(c => c.id === changelogId)
+      
+      if (!changelog) {
+        throw new Error(`Changelog not found: ${changelogId}`)
+      }
+      
+      return changelog
+    } else {
+      const changelogsDir = path.join(this.basePath, 'changelogs')
+      const changelogFile = path.join(changelogsDir, `${sanitize(changelogId)}.json`)
+
+      if (!(await fs.pathExists(changelogFile))) {
+        throw new Error(`Changelog not found: ${changelogId}`)
+      }
+
+      const changelog = await fs.readJson(changelogFile)
+      console.log(`📂 Changelog loaded: v${changelog.version}`)
+      return changelog
+    }
+
+  } catch (error) {
+    console.error('❌ Failed to load changelog:', error)
+    throw new Error(`Failed to load changelog: ${error.message}`)
+  }
+}
+
+/**
+ * Load all changelogs
+ */
+async loadAllChangelogs() {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    if (this.browserMode) {
+      const changelogs = this._getBrowserStorage('projiki-changelogs') || []
+      console.log(`📚 Loaded ${changelogs.length} changelogs from localStorage`)
+      return changelogs.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+    } else {
+      const changelogs = []
+      const changelogsDir = path.join(this.basePath, 'changelogs')
+      
+      // Ensure changelogs directory exists
+      await fs.ensureDir(changelogsDir)
+      
+      const changelogFiles = await fs.readdir(changelogsDir)
+
+      for (const fileName of changelogFiles) {
+        if (fileName.endsWith('.json')) {
+          const changelogFile = path.join(changelogsDir, fileName)
+          
+          try {
+            const changelog = await fs.readJson(changelogFile)
+            changelogs.push(changelog)
+          } catch (error) {
+            console.warn(`⚠️ Skipping corrupted changelog: ${fileName}`, error.message)
+          }
+        }
+      }
+
+      // Sort by last updated
+      changelogs.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+
+      console.log(`📚 Loaded ${changelogs.length} changelogs`)
+      return changelogs
+    }
+
+  } catch (error) {
+    console.error('❌ Failed to load changelogs:', error)
+    throw new Error(`Failed to load changelogs: ${error.message}`)
+  }
+}
+
+/**
+ * Delete a changelog
+ */
+async deleteChangelog(changelogId) {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    if (this.browserMode) {
+      const changelogs = this._getBrowserStorage('projiki-changelogs') || []
+      const filteredChangelogs = changelogs.filter(c => c.id !== changelogId)
+      this._setBrowserStorage('projiki-changelogs', filteredChangelogs)
+    } else {
+      const changelogsDir = path.join(this.basePath, 'changelogs')
+      const changelogFile = path.join(changelogsDir, `${sanitize(changelogId)}.json`)
+      
+      if (await fs.pathExists(changelogFile)) {
+        await fs.remove(changelogFile)
+      }
+    }
+
+    console.log(`🗑️ Changelog deleted: ${changelogId}`)
+
+  } catch (error) {
+    console.error('❌ Failed to delete changelog:', error)
+    throw new Error(`Failed to delete changelog: ${error.message}`)
+  }
+}
+
+/**
+ * Load changelogs for a specific project
+ */
+async loadProjectChangelogs(projectId) {
+  if (!this.isInitialized) {
+    throw new Error('DataService not initialized')
+  }
+
+  try {
+    const allChangelogs = await this.loadAllChangelogs()
+    const projectChangelogs = allChangelogs.filter(c => c.projectId === projectId)
+    
+    console.log(`📋 Loaded ${projectChangelogs.length} changelogs for project: ${projectId}`)
+    return projectChangelogs
+    
+  } catch (error) {
+    console.error('❌ Failed to load project changelogs:', error)
+    throw new Error(`Failed to load project changelogs: ${error.message}`)
+  }
+}
+
+// =============================================================================
 // UNSORTED BIN & SESSION DATA
 // =============================================================================
 

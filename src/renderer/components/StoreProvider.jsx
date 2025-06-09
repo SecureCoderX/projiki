@@ -6,6 +6,7 @@ import usePromptStore from '../stores/usePromptStore'
 import useSnippetStore from '../stores/useSnippetStore'
 import useNotesStore from '../stores/useNotesStore'
 import useAppStore from '../stores/useAppStore'
+import useChangelogStore from '../stores/useChangelogStore'
 
 /**
  * StoreProvider - Initializes all Zustand stores on app startup
@@ -22,6 +23,7 @@ const StoreProvider = ({ children }) => {
   const initializeNotesStore = useNotesStore(state => state.initialize)
   const setLoading = useAppStore(state => state.setLoading)
   const addNotification = useAppStore(state => state.addNotification)
+  const initializeChangelogStore = useChangelogStore(state => state.initialize)
 
   useEffect(() => {
     const initializeStores = async () => {
@@ -44,6 +46,9 @@ const StoreProvider = ({ children }) => {
         
         console.log('📝 Initializing notes store...')
         await initializeNotesStore()
+
+        console.log('📋 Initializing changelog store...')
+        await initializeChangelogStore()
         
         // Mark stores as initialized
         setStoresInitialized(true)

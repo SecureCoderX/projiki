@@ -10,10 +10,19 @@
     "build": "npm run build:renderer && npm run build:electron",
     "build:renderer": "vite build",
     "build:electron": "electron-builder",
+    "dist": "npm run build:renderer && electron-builder",
+    "dist:linux": "npm run build:renderer && electron-builder --linux",
+    "dist:appimage": "npm run build:renderer && electron-builder --linux appimage",
+    "dist:deb": "npm run build:renderer && electron-builder --linux deb", 
+    "dist:rpm": "npm run build:renderer && electron-builder --linux rpm",
+    "dist:snap": "npm run build:renderer && electron-builder --linux snap",
+    "dist:all": "npm run build:renderer && electron-builder --linux appimage deb rpm",
+    "pack": "npm run build:renderer && electron-builder --dir",
     "test": "jest",
     "lint": "eslint src --ext .js,.jsx",
     "lint:fix": "eslint src --ext .js,.jsx --fix",
-    "format": "prettier --write \"src/**/*.{js,jsx,css,md}\""
+    "format": "prettier --write \"src/**/*.{js,jsx,css,md}\"",
+    "postinstall": "electron-builder install-app-deps"
   },
   "keywords": [
     "electron",
@@ -59,5 +68,91 @@
     "tailwindcss": "^3.4.1",
     "vite": "^5.0.0",
     "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "dev.projiki.app",
+    "productName": "Projiki",
+    "copyright": "Copyright © 2024 Chad Parker",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/main/**/*",
+      "src/assets/**/*",
+      "dist-renderer/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "src/assets",
+        "to": "assets"
+      }
+    ],
+    "linux": {
+      "category": "Development",
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        },
+        {
+          "target": "rpm",
+          "arch": ["x64"]
+        }
+      ],
+      "desktop": {
+        "Name": "Projiki",
+        "Comment": "AI-native project management for developers",
+        "Keywords": "project;management;development;ai;tasks;notes;code;",
+        "Categories": "Development;ProjectManagement;Office;",
+        "StartupWMClass": "Projiki"
+      },
+      "synopsis": "Project management tool for developers and vibe coders",
+      "description": "Projiki is the world's first AI-native project management tool designed specifically for developers. Features dual workflow support for structured development and creative vibe coding, with integrated AI prompts, code snippets, and comprehensive project management capabilities."
+    },
+    "appImage": {
+      "license": "MIT",
+      "category": "Development"
+    },
+    "deb": {
+      "packageCategory": "Development",
+      "priority": "optional",
+      "depends": [
+        "libnotify4",
+        "libxtst6",
+        "libnss3",
+        "libxss1",
+        "libxrandr2",
+        "libasound2",
+        "libpangocairo-1.0-0",
+        "libatk1.0-0",
+        "libcairo-gobject2",
+        "libgtk-3-0",
+        "libgdk-pixbuf2.0-0"
+      ]
+    },
+    "rpm": {
+      "packageCategory": "Development",
+      "license": "MIT",
+      "depends": [
+        "libnotify",
+        "libXtst",
+        "nss",
+        "libXScrnSaver",
+        "libXrandr",
+        "alsa-lib",
+        "pango",
+        "atk",
+        "cairo-gobject",
+        "gtk3",
+        "gdk-pixbuf2"
+      ]
+    }
   }
 }

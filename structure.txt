@@ -18,6 +18,14 @@
 │   ├── renderer
 │   │   ├── App.jsx
 │   │   ├── components
+│   │   │   ├── changelogs
+│   │   │   │   ├── ChangelogCard.jsx
+│   │   │   │   ├── ChangelogForm.jsx
+│   │   │   │   ├── ChangelogManager.jsx
+│   │   │   │   ├── ChangelogTimeline.jsx
+│   │   │   │   ├── index.js
+│   │   │   │   ├── ReleaseNotesEditor.jsx
+│   │   │   │   └── VersionPicker.jsx
 │   │   │   ├── common
 │   │   │   │   ├── DataStatus.jsx
 │   │   │   │   └── SearchBar.jsx
@@ -30,6 +38,9 @@
 │   │   │   │   └── Sidebar.jsx
 │   │   │   ├── Loading.jsx
 │   │   │   ├── LoadingOverlay.jsx
+│   │   │   ├── modes
+│   │   │   │   ├── index.js
+│   │   │   │   └── ModeToggle.jsx
 │   │   │   ├── notes
 │   │   │   │   ├── index.js
 │   │   │   │   ├── NoteCard.jsx
@@ -56,6 +67,9 @@
 │   │   │   ├── SplashScreen.jsx
 │   │   │   ├── StoreProvider.jsx
 │   │   │   ├── tasks
+│   │   │   │   ├── BugCard.jsx
+│   │   │   │   ├── BugFilters.jsx
+│   │   │   │   ├── BugForm.jsx
 │   │   │   │   ├── CreativeView.jsx
 │   │   │   │   ├── index.js
 │   │   │   │   ├── KanbanBoard.jsx
@@ -100,6 +114,7 @@
 │   │   │   ├── index.js
 │   │   │   ├── StoreDataIntegration.js
 │   │   │   ├── useAppStore.js
+│   │   │   ├── useChangelogStore.js
 │   │   │   ├── useNotesStore.js
 │   │   │   ├── useProjectStore.js
 │   │   │   ├── usePromptStore.js

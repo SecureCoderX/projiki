@@ -6,3 +6,6 @@ export { default as TimelineView } from './TimelineView';
 export { default as CreativeView } from './CreativeView';
 export { default as TaskFilters } from './TaskFilters';
 export { default as ViewToggle } from './ViewToggle';
+export { default as BugForm } from './BugForm';
+export { default as BugCard } from './BugCard';
+export { default as BugFilters } from './BugFilters';

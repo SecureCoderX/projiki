@@ -1,7 +1,106 @@
 import React from 'react';
 import { Card, Input, Button, ThemeToggle } from '../components/ui';
+import useAppStore from '../stores/useAppStore';
 
 const Settings = () => {
+  const { addNotification } = useAppStore();
+
+  const handleExportSettings = () => {
+    try {
+      const settings = {
+        theme: localStorage.getItem('theme') || 'dark',
+        autoSave: true,
+        defaultProjectPath: localStorage.getItem('defaultProjectPath') || '',
+        exportDate: new Date().toISOString()
+      };
+
+      const blob = new Blob([JSON.stringify(settings, null, 2)], {
+        type: 'application/json'
+      });
+      
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `projiki-settings-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      addNotification({
+        type: 'success',
+        title: 'Settings Exported',
+        message: 'Your settings have been exported successfully'
+      });
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Export Failed',
+        message: 'Failed to export settings'
+      });
+    }
+  };
+
+  const handleImportSettings = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const settings = JSON.parse(text);
+        
+        if (settings.theme) {
+          localStorage.setItem('theme', settings.theme);
+        }
+        if (settings.defaultProjectPath) {
+          localStorage.setItem('defaultProjectPath', settings.defaultProjectPath);
+        }
+
+        addNotification({
+          type: 'success',
+          title: 'Settings Imported',
+          message: 'Settings imported successfully. Refresh to see changes.'
+        });
+      } catch (error) {
+        addNotification({
+          type: 'error',
+          title: 'Import Failed',
+          message: 'Failed to import settings'
+        });
+      }
+    };
+    
+    input.click();
+  };
+
+  const handleResetToDefaults = () => {
+    if (window.confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
+      try {
+        // Reset theme to dark
+        localStorage.setItem('theme', 'dark');
+        // Clear default project path
+        localStorage.removeItem('defaultProjectPath');
+        
+        addNotification({
+          type: 'success',
+          title: 'Settings Reset',
+          message: 'Settings reset to defaults. Refresh to see changes.'
+        });
+      } catch (error) {
+        addNotification({
+          type: 'error',
+          title: 'Reset Failed',
+          message: 'Failed to reset settings'
+        });
+      }
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -62,13 +161,25 @@ const Settings = () => {
         <Card>
           <h3 className="text-lg font-semibold mb-4 text-text-primary">Actions</h3>
           <div className="space-y-3">
-            <Button variant="secondary" className="w-full">
+            <Button 
+              variant="secondary" 
+              className="w-full"
+              onClick={handleExportSettings}
+            >
               Export Settings
             </Button>
-            <Button variant="secondary" className="w-full">
+            <Button 
+              variant="secondary" 
+              className="w-full"
+              onClick={handleImportSettings}
+            >
               Import Settings
             </Button>
-            <Button variant="danger" className="w-full">
+            <Button 
+              variant="danger" 
+              className="w-full"
+              onClick={handleResetToDefaults}
+            >
               Reset to Defaults
             </Button>
           </div>
